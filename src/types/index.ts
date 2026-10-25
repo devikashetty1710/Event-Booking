@@ -4,6 +4,7 @@ export interface UserProfile {
   id: string
   fullName: string
   email: string
+  password?: string
   role: UserRole
   department: string
   avatarUrl?: string
@@ -133,10 +134,14 @@ export interface VenueMaintenanceBlock {
 export interface BookingHistoryItem {
   id: string
   bookingId: string
+  eventTitle?: string
+  venueName?: string
   previousStatus: BookingStatus
   newStatus: BookingStatus
+  actionType?: 'Created' | 'Approved' | 'Rejected' | 'Cancelled' | 'Reassigned' | 'Rescheduled' | 'Modified'
   changedBy: string
   changedByName: string
+  changedByRole?: UserRole
   comments: string
   createdAt: string
 }

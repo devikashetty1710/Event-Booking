@@ -129,19 +129,31 @@ export const SystemSettingsPage: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm font-bold text-slate-900">
               <Database className="w-4 h-4 text-indigo-600" />
-              Supabase PostgreSQL Connection Status
+              Event History Database & Persistence Architecture
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-xs">
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
               <div>
                 <span className="font-bold text-slate-900 block">
-                  {isSupabaseConfigured ? 'Hosted Supabase PostgreSQL Active' : 'In-Browser Local Demo Provider Active'}
+                  IndexedDB Transactional Engine (NMIT_CampusConnect_EventDB)
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  Persistent local database storing full event audit records, approvals, rejections, and state transitions with indexed queries on bookingId and timestamps.
+                </span>
+              </div>
+              <span className="w-3 h-3 rounded-full bg-emerald-500" title="IndexedDB Connected" />
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div>
+                <span className="font-bold text-slate-900 block">
+                  {isSupabaseConfigured ? 'Hosted Supabase PostgreSQL Active' : 'Supabase PostgreSQL Cloud Replica'}
                 </span>
                 <span className="text-[11px] text-slate-500">
                   {isSupabaseConfigured 
-                    ? 'Connected with live remote database and Row Level Security.' 
-                    : 'Operating with localStorage transactional replication and seed data. Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to link live remote backend.'}
+                    ? 'Connected with live remote database table booking_history and Row Level Security.' 
+                    : 'Optional remote sync. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to mirror local IndexedDB event history into cloud PostgreSQL.'}
                 </span>
               </div>
               <span className={`w-3 h-3 rounded-full ${isSupabaseConfigured ? 'bg-emerald-500' : 'bg-blue-500'}`} />

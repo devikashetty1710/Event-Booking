@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Modal } from '../common/Modal'
 import { Badge } from '../common/Badge'
-import { Booking, Venue } from '@/types'
+import { Booking, Venue, BookingHistoryItem } from '@/types'
 import { formatDateIST, formatTimeIST, getStatusBadgeProps, getCategoryBadgeProps, generateIcsFile, downloadFile } from '@/lib/utils'
-import { Calendar, Clock, MapPin, Users, User, Download, QrCode, FileText, CheckCircle2 } from 'lucide-react'
+import { fetchEventHistoryByBookingId } from '@/lib/eventHistoryDB'
+import { Calendar, Clock, MapPin, Users, User, Download, QrCode, FileText, CheckCircle2, History, Database } from 'lucide-react'
 
 interface EventDetailModalProps {
   isOpen: boolean
@@ -20,6 +21,19 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   venue,
   onOpenQr
 }) => {
+  const [historyItems, setHistoryItems] = useState<BookingHistoryItem[]>([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+
+  useEffect(() => {
+    if (booking && isOpen) {
+      setIsLoadingHistory(true)
+      fetchEventHistoryByBookingId(booking.id)
+        .then(items => setHistoryItems(items))
+        .catch(err => console.warn('Could not load history for modal:', err))
+        .finally(() => setIsLoadingHistory(false))
+    }
+  }, [booking, isOpen])
+
   if (!booking) return null
 
   const statusProps = getStatusBadgeProps(booking.status)
@@ -147,6 +161,45 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 — Reviewed by {booking.reviewedByName} ({formatDateIST(booking.reviewedAt || '')})
               </span>
             )}
+          </div>
+        )}
+
+        {/* Database Event History & Lifecycle Audit Trail */}
+        {historyItems.length > 0 && (
+          <div className="space-y-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5 text-indigo-600" />
+                Event Lifecycle History (Database)
+              </h4>
+              <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                <Database className="w-3 h-3 text-blue-700" />
+                {historyItems.length} records
+              </span>
+            </div>
+
+            <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+              {historyItems.map((h) => (
+                <div key={h.id} className="p-2 bg-slate-50 rounded-lg border border-slate-200/80 text-[11px] space-y-0.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${
+                        h.actionType === 'Approved' ? 'bg-emerald-100 text-emerald-800' :
+                        h.actionType === 'Rejected' ? 'bg-rose-100 text-rose-800' :
+                        h.actionType === 'Created' ? 'bg-blue-100 text-blue-800' :
+                        'bg-slate-200 text-slate-700'
+                      }`}>
+                        {h.actionType || h.newStatus}
+                      </span>
+                      <span className="font-semibold text-slate-900">{h.changedByName}</span>
+                      <span className="text-[9px] text-slate-500 font-mono">({h.changedByRole || 'user'})</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-mono">{formatDateIST(h.createdAt)}</span>
+                  </div>
+                  <p className="text-slate-600 pl-1 border-l-2 border-slate-200 text-[10px]">{h.comments}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

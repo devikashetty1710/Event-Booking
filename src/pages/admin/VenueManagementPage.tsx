@@ -61,7 +61,7 @@ export const VenueManagementPage: React.FC<VenueManagementPageProps> = ({
       equipment: ['Projector and display screen', 'Wireless microphone', 'Wi-Fi'],
       operatingHours: { start: '08:00', end: '20:00' },
       accessibilityFeatures: ['Elevator Access'],
-      imageUrl: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=800&q=80',
+      imageUrl: '',
       isActive: true,
       maintenanceStatus: 'normal',
       approvalRequired: true,

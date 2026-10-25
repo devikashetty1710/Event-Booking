@@ -15,7 +15,8 @@ import {
   Sparkles,
   Layers,
   School,
-  ChevronRight
+  ChevronRight,
+  Building2
 } from 'lucide-react'
 
 interface UserDashboardProps {
@@ -243,11 +244,9 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                 onClick={() => onNavigate('venues')}
               >
                 <div className="flex items-center gap-3">
-                  <img
-                    src={venue.imageUrl}
-                    alt={venue.name}
-                    className="w-14 h-14 rounded-lg object-cover shrink-0"
-                  />
+                  <div className="w-12 h-12 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-indigo-600">
+                    <Building2 className="w-6 h-6" />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
                       <h4 className="font-bold text-xs text-slate-900 truncate">

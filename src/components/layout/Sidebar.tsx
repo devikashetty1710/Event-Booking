@@ -15,7 +15,8 @@ import {
   BarChart3,
   Layers,
   Sparkles,
-  X
+  X,
+  Database
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -66,6 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: Layers, 
       badge: pendingRequestsCount > 0 ? pendingRequestsCount : undefined 
     },
+    { id: 'admin-history', label: 'Event History (DB)', icon: Database },
     { id: 'admin-venues', label: 'Venue Management', icon: Building2 },
     { id: 'admin-conflicts', label: 'Conflict Monitor', icon: ShieldAlert },
     { id: 'admin-reports', label: 'Reports & Analytics', icon: BarChart3 },

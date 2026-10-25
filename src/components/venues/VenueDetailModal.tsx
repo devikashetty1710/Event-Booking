@@ -47,32 +47,18 @@ export const VenueDetailModal: React.FC<VenueDetailModalProps> = ({
       maxWidth="2xl"
     >
       <div className="space-y-6">
-        {/* Banner Image with Badges */}
-        <div className="relative h-56 rounded-xl overflow-hidden border border-slate-200 shadow-2xs">
-          <img
-            src={venue.imageUrl}
-            alt={venue.name}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
-          
-          <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-white">
-            <div>
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-300 block">
-                {venue.locationNotes || venue.block}
-              </span>
-              <h3 className="text-xl font-bold font-heading">{venue.name}</h3>
-            </div>
-            {!venue.isDemoVenue ? (
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-900/90 text-white border border-blue-400/30 backdrop-blur-md shadow-xs">
-                ★ Official NMAMIT Venue
-              </span>
-            ) : (
-              <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-500/90 text-white backdrop-blur-md">
-                Demonstration Venue
-              </span>
-            )}
+        {/* Clean Info Header (No Photos) */}
+        <div className="p-5 bg-gradient-to-r from-blue-900 to-indigo-800 text-white rounded-2xl shadow-sm">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-200">
+              {venue.block} • {venue.venueType}
+            </span>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-md">
+              NMAMIT Campus Venue
+            </span>
           </div>
+          <h3 className="text-xl font-bold font-heading">{venue.name}</h3>
+          <p className="text-xs text-indigo-200 mt-1">{venue.locationNotes || venue.block}</p>
         </div>
 
         {/* Description */}

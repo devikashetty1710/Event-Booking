@@ -28,6 +28,7 @@ import { ConflictMonitorPage } from './pages/admin/ConflictMonitorPage'
 import { ReportsAnalyticsPage } from './pages/admin/ReportsAnalyticsPage'
 import { UserRoleManagementPage } from './pages/admin/UserRoleManagementPage'
 import { SystemSettingsPage } from './pages/admin/SystemSettingsPage'
+import { EventHistoryDBPage } from './pages/admin/EventHistoryDBPage'
 
 const MainApp: React.FC = () => {
   const { currentUser, isAdmin, isAuthenticated } = useAuth()
@@ -241,6 +242,8 @@ const MainApp: React.FC = () => {
                   venues={venues}
                 />
               )}
+
+              {currentTab === 'admin-history' && <EventHistoryDBPage />}
 
               {currentTab === 'admin-calendar' && (
                 <MasterCalendarPage

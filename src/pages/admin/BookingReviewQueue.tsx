@@ -105,6 +105,11 @@ export const BookingReviewQueue: React.FC<BookingReviewQueueProps> = ({
 
   const handleApprove = async () => {
     if (!activeBooking || !currentUser) return
+    if (currentUser.role !== 'admin') {
+      setActionError('Security Policy: Only verified campus administrators have the power to approve bookings.')
+      return
+    }
+
     setIsProcessing(true)
     setActionError(null)
 
@@ -115,6 +120,7 @@ export const BookingReviewQueue: React.FC<BookingReviewQueueProps> = ({
       assignedVenueId: targetVenueId,
       reviewerId: currentUser.id,
       reviewerName: currentUser.fullName,
+      reviewerRole: currentUser.role,
       reviewNotes: reviewNotes || 'Approved by Campus Administration.'
     })
 
@@ -129,6 +135,11 @@ export const BookingReviewQueue: React.FC<BookingReviewQueueProps> = ({
 
   const handleReject = async () => {
     if (!activeBooking || !currentUser) return
+    if (currentUser.role !== 'admin') {
+      setActionError('Security Policy: Only verified campus administrators have the power to reject bookings.')
+      return
+    }
+
     if (!rejectionReason.trim()) {
       setActionError('A mandatory rejection reason must be supplied to the organizer.')
       return
@@ -141,6 +152,7 @@ export const BookingReviewQueue: React.FC<BookingReviewQueueProps> = ({
       bookingId: activeBooking.id,
       reviewerId: currentUser.id,
       reviewerName: currentUser.fullName,
+      reviewerRole: currentUser.role,
       rejectionReason: rejectionReason.trim()
     })
 
@@ -438,17 +450,39 @@ export const BookingReviewQueue: React.FC<BookingReviewQueueProps> = ({
               </div>
             </div>
 
-            {/* Booking Audit History */}
+            {/* Booking Audit History from Persistent Database */}
             {bookingHistoryList.length > 0 && (
-              <div className="pt-2 border-t border-slate-100">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                  Audit History
-                </span>
-                <div className="space-y-1 text-[11px] text-slate-600">
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <History className="w-3.5 h-3.5 text-indigo-600" />
+                    Event History & Audit Trail (IndexedDB)
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {bookingHistoryList.length} DB records
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                   {bookingHistoryList.map(h => (
-                    <div key={h.id} className="flex items-center justify-between bg-slate-50 p-1.5 rounded">
-                      <span><strong>{h.changedByName}:</strong> {h.comments}</span>
-                      <span className="text-slate-400">{formatDateIST(h.createdAt)}</span>
+                    <div key={h.id} className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 space-y-1 text-[11px]">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            h.actionType === 'Approved' ? 'bg-emerald-100 text-emerald-800' :
+                            h.actionType === 'Rejected' ? 'bg-rose-100 text-rose-800' :
+                            h.actionType === 'Created' ? 'bg-blue-100 text-blue-800' :
+                            'bg-amber-100 text-amber-800'
+                          }`}>
+                            {h.actionType || h.newStatus}
+                          </span>
+                          <span className="font-semibold text-slate-900">{h.changedByName}</span>
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-slate-200/70 text-slate-600 font-mono">
+                            {h.changedByRole || 'user'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400">{formatDateIST(h.createdAt)}</span>
+                      </div>
+                      <p className="text-slate-600 pl-1 border-l-2 border-slate-200">{h.comments}</p>
                     </div>
                   ))}
                 </div>

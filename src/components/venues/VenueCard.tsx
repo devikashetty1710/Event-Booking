@@ -8,8 +8,7 @@ import {
   Clock, 
   CheckCircle2, 
   ArrowRight, 
-  Sparkles, 
-  ShieldCheck,
+  Building2,
   Eye
 } from 'lucide-react'
 
@@ -26,62 +25,50 @@ export const VenueCard: React.FC<VenueCardProps> = ({
 }) => {
   return (
     <Card hoverable className="flex flex-col h-full group border-slate-200">
-      {/* Venue Image Banner */}
-      <div className="relative h-44 overflow-hidden bg-slate-100">
-        <img
-          src={venue.imageUrl}
-          alt={venue.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-transparent" />
+      {/* Clean Venue Header (No Photos) */}
+      <div className="p-4 bg-gradient-to-r from-blue-900/5 to-indigo-50/50 border-b border-slate-100">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Building2 className="w-5 h-5 text-indigo-100" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-900 bg-blue-100/70 px-2 py-0.5 rounded">
+                {venue.block}
+              </span>
+              <h3 className="font-bold text-sm text-slate-900 group-hover:text-blue-900 transition-colors mt-1 leading-snug">
+                {venue.name}
+              </h3>
+            </div>
+          </div>
 
-        {/* Real vs Demo badge */}
-        <div className="absolute top-3 left-3">
-          {!venue.isDemoVenue ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-900/90 text-white backdrop-blur-md shadow-xs border border-blue-400/30">
-              <Sparkles className="w-3 h-3 text-amber-400" />
-              NMAMIT Venue
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-800/80 text-slate-200 backdrop-blur-md">
-              Demo Venue
-            </span>
-          )}
-        </div>
-
-        {/* Type pill on top right */}
-        <div className="absolute top-3 right-3">
-          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white/90 text-slate-800 backdrop-blur-md">
+          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white text-slate-700 border border-slate-200 shrink-0">
             {venue.venueType}
           </span>
         </div>
 
-        {/* Bottom overlay: Location and Capacity */}
-        <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-white">
-          <div className="flex items-center gap-1 text-[11px] font-medium text-slate-200">
-            <MapPin className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
-            <span className="truncate">{venue.block}</span>
-          </div>
+        {/* Capacity & Location Strip */}
+        <div className="flex items-center justify-between text-xs text-slate-600 pt-1">
+          <span className="flex items-center gap-1 font-medium">
+            <MapPin className="w-3.5 h-3.5 text-blue-800 shrink-0" />
+            <span className="truncate">{venue.locationNotes || venue.block}</span>
+          </span>
 
-          <div className="flex items-center gap-1 text-xs font-bold bg-slate-900/70 px-2 py-0.5 rounded-md backdrop-blur-xs">
-            <Users className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            <span>{venue.minCapacity}–{venue.maxCapacity}</span>
-          </div>
+          <span className="flex items-center gap-1 font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200">
+            <Users className="w-3.5 h-3.5 text-blue-800 shrink-0" />
+            <span>{venue.minCapacity}–{venue.maxCapacity} seats</span>
+          </span>
         </div>
       </div>
 
       {/* Card Content */}
       <div className="p-4 flex-1 flex flex-col justify-between">
         <div>
-          <div className="flex items-start justify-between gap-2 mb-1.5">
-            <h3 className="font-bold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight">
-              {venue.name}
-            </h3>
-            {venue.maintenanceStatus !== 'normal' && (
-              <Badge variant="warning">Maintenance</Badge>
-            )}
-          </div>
+          {venue.maintenanceStatus !== 'normal' && (
+            <div className="mb-2">
+              <Badge variant="warning">Under Maintenance</Badge>
+            </div>
+          )}
 
           <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3">
             {venue.description}
@@ -93,7 +80,7 @@ export const VenueCard: React.FC<VenueCardProps> = ({
               <Clock className="w-3.5 h-3.5 text-slate-400" />
               {venue.operatingHours.start} - {venue.operatingHours.end}
             </span>
-            <span className="text-indigo-700 font-semibold">
+            <span className="text-blue-900 font-semibold">
               Optimum: {venue.recommendedCapacity} seats
             </span>
           </div>
@@ -105,7 +92,7 @@ export const VenueCard: React.FC<VenueCardProps> = ({
                 key={i}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-600 border border-slate-200"
               >
-                <CheckCircle2 className="w-2.5 h-2.5 text-indigo-500" />
+                <CheckCircle2 className="w-2.5 h-2.5 text-blue-700" />
                 {eq}
               </span>
             ))}
@@ -130,7 +117,7 @@ export const VenueCard: React.FC<VenueCardProps> = ({
           {onBookVenue && (
             <button
               onClick={() => onBookVenue(venue.id)}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-2xs transition-colors"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs shadow-2xs transition-colors"
             >
               <span>Book</span>
               <ArrowRight className="w-3.5 h-3.5" />

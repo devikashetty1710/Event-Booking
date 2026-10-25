@@ -71,21 +71,33 @@ A critical requirement of the system is guaranteeing that two users cannot reser
 
 ---
 
-## 5. Evaluation Personas & Demo Accounts
+## 5. Evaluation Credentials & Role-Based Access Control
 
-For grading and demonstration, three accounts are pre-configured with 1-click access:
+The platform enforces strict Role-Based Access Control (RBAC). **Campus Administrators** hold exclusive credentials and authority to accept, reject, and reassign venue bookings, while **Organizers** create requests, monitor status, and export calendar invites.
 
-| Persona | Name | Role | Email | Responsibilities |
+### Pre-Configured Verified Credentials:
+
+| Persona & Role | Name | Email | Password Credentials | Authority & Capabilities |
 | :--- | :--- | :--- | :--- | :--- |
-| **Dean / Administrator** | Dr. Rajesh Hegde | `admin` | `dean.studentaffairs@nmamit.in` | Full clearance rights, review queue, conflict monitor, venue management |
-| **Faculty Organizer** | Prof. Smitha Rao | `user` | `smitha.rao@nmamit.in` | Department symposium requests, calendar tracking, QR check-in passes |
-| **Student Club Lead** | Rohan Kamath | `user` | `rohan.kamath@nitte.in` | Hackathon & cultural bookings, alternative slot selection, cancellation |
+| **Campus Administrator** (`admin`) | Campus Administrator | `admin@nmamit.in` | `Admin@123` | **Exclusive power to accept or reject bookings**, reassign venues, manage venues & maintenance, inspect Event History Database, and configure system rules. |
+| **Student Organizer** (`user`) | NNM23IS046 | `nnm23is046@nmamit.in` | `User@123` | Discover campus venues, submit booking requests, track clearance status, view database event lifecycle, download `.ics` calendar passes, and cancel own requests. |
+| **Faculty Organizer** (`user`) | Prof. Smitha Rao | `smitha.rao@nmamit.in` | `Faculty@123` | Submit departmental symposium requests, view full database audit history, and generate check-in passes. |
 
-*Tip: Use the quick role toggle in the top navbar or the Persona Switcher on the Profile page to switch between Administrator and Organizer views instantly.*
+> **Security Guard:** Non-administrators cannot accept or reject bookings. Attempting to elevate role to Administrator requires the administrator credential password (`Admin@123`).
 
 ---
 
-## 6. Installation & Local Development
+## 6. Event History Database (Persistent IndexedDB + Supabase Sync)
+
+Event booking history is stored in a dedicated persistent browser database engine (**IndexedDB**, DB: `NMIT_CampusConnect_EventDB`, store: `event_history`):
+- **Transaction Log:** Every state change (booking created, approved by admin, rejected with reason, reassigned, or cancelled) is permanently stored as an immutable audit record with timestamps, actor IDs, roles, and comments.
+- **Admin Event History Portal:** Administrators can navigate to **Event History (DB)** from the sidebar to inspect all database records, filter by action type or role, and export the audit trail as CSV or JSON.
+- **Organizer Lifecycle View:** Organizers can click "Details" on any booking to view the full chronological history loaded directly from the database.
+- **Dual-Write Cloud Sync:** Automatically syncs with hosted Supabase PostgreSQL table `booking_history` when cloud credentials are configured.
+
+---
+
+## 7. Installation & Local Development
 
 ### Prerequisites
 - Node.js v18+ (tested on v22)
@@ -120,7 +132,7 @@ npm run preview
 
 ---
 
-## 7. Supabase Database Setup & Migrations
+## 8. Supabase Database Setup & Migrations
 
 If connecting a hosted Supabase PostgreSQL project:
 1. Create a new project in [Supabase](https://supabase.com).

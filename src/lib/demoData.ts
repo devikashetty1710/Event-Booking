@@ -1,37 +1,34 @@
 import { Venue, Booking, UserProfile, VenueMaintenanceBlock, BookingHistoryItem, NotificationItem } from '@/types'
 
+/**
+ * INITIAL INSTITUTIONAL ACCOUNTS
+ * Only the Campus Administrator is pre-seeded so they can log in with verified credentials.
+ * Organizers must register their own accounts first before submitting bookings.
+ */
 export const INITIAL_USERS: UserProfile[] = [
   {
     id: 'user-admin-1',
     fullName: 'Campus Administrator',
     email: 'admin@nmamit.in',
+    password: 'Admin@123',
     role: 'admin',
     department: 'Office of Campus Facilities & Event Administration',
     phone: '+91 8258 281263',
-    createdAt: '2025-01-10T09:00:00Z',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'
-  },
-  {
-    id: 'user-nnm23is046',
-    fullName: 'NNM23IS046',
-    email: 'nnm23is046@nmamit.in',
-    role: 'user',
-    department: 'Department of Information Science & Engineering',
-    phone: '+91 98450 12345',
-    createdAt: '2025-02-01T10:30:00Z',
-    avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'
+    createdAt: '2025-01-10T09:00:00Z'
   }
 ]
 
-
+/**
+ * NMAMIT OFFICIAL VENUES
+ * Photos have been removed for a clean, simplified design.
+ */
 export const INITIAL_VENUES: Venue[] = [
-  // 1. REAL NMAMIT VENUE
   {
     id: 'venue-nandini',
     name: 'Nandini Seminar Hall',
     block: 'APJ Kalam Block',
     venueType: 'Seminar Hall',
-    description: 'Premier seminar hall located on the 2nd floor of APJ Kalam Block, equipped with tier seating, dual air-conditioning, smart motorized projector screen, and high-fidelity PA system.',
+    description: 'Premier seminar hall located on the 2nd floor of APJ Kalam Block. Equipped with tiered seating, dual air-conditioning, motorized projector screen, and high-fidelity PA system.',
     minCapacity: 50,
     maxCapacity: 100,
     recommendedCapacity: 80,
@@ -39,7 +36,7 @@ export const INITIAL_VENUES: Venue[] = [
     equipment: ['Projector and display screen', 'Wireless microphone', 'Wired microphone', 'Speakers and sound system', 'Air conditioning', 'Wi-Fi', 'Podium'],
     operatingHours: { start: '08:00', end: '20:00' },
     accessibilityFeatures: ['Elevator Access in Block', 'Wheelchair Ramp to Stage', 'Designated Front Seating'],
-    imageUrl: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '',
     isActive: true,
     maintenanceStatus: 'normal',
     approvalRequired: true,
@@ -48,13 +45,12 @@ export const INITIAL_VENUES: Venue[] = [
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z'
   },
-  // 2. REAL NMAMIT VENUE
   {
     id: 'venue-shambavi',
     name: 'Shambavi Seminar Hall',
     block: 'APJ Kalam Block',
     venueType: 'Seminar Hall',
-    description: 'High-capacity seminar auditorium in APJ Kalam Block featuring dual HD laser projectors, video-conferencing bridge, professional stage lighting, and full acoustic treatment.',
+    description: 'High-capacity seminar auditorium in APJ Kalam Block featuring dual HD laser projectors, video-conferencing bridge, professional stage lighting, and acoustic treatment.',
     minCapacity: 100,
     maxCapacity: 200,
     recommendedCapacity: 160,
@@ -62,7 +58,7 @@ export const INITIAL_VENUES: Venue[] = [
     equipment: ['Projector and display screen', 'Wireless microphone', 'Wired microphone', 'Speakers and sound system', 'Air conditioning', 'Video conferencing equipment', 'Wi-Fi', 'Podium', 'Recording equipment'],
     operatingHours: { start: '08:00', end: '21:00' },
     accessibilityFeatures: ['Elevator Access', 'Wide Double Doors', 'Hearing Loop System'],
-    imageUrl: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '',
     isActive: true,
     maintenanceStatus: 'normal',
     approvalRequired: true,
@@ -71,7 +67,6 @@ export const INITIAL_VENUES: Venue[] = [
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z'
   },
-  // 3. REAL NMAMIT VENUE
   {
     id: 'venue-sambhram',
     name: 'Sambhram Hall',
@@ -85,7 +80,7 @@ export const INITIAL_VENUES: Venue[] = [
     equipment: ['Projector and display screen', 'Wireless microphone', 'Wired microphone', 'Speakers and sound system', 'Air conditioning', 'Video conferencing equipment', 'Wi-Fi', 'Podium', 'Recording equipment'],
     operatingHours: { start: '08:00', end: '22:00' },
     accessibilityFeatures: ['Ground-level Wheelchair Access', 'Ramp to Main Stage', 'Accessible Restrooms'],
-    imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '',
     isActive: true,
     maintenanceStatus: 'normal',
     approvalRequired: true,
@@ -94,13 +89,12 @@ export const INITIAL_VENUES: Venue[] = [
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z'
   },
-  // 4. REAL NMAMIT VENUE
   {
     id: 'venue-phalguni',
     name: 'Phalguni Hall',
     block: 'Ramanujan Block',
     venueType: 'Seminar Hall',
-    description: 'Compact, modern hall in Ramanujan Block tailored for interactive department symposiums, student presentations, workshops, and guest lectures with interactive display.',
+    description: 'Modern hall in Ramanujan Block tailored for interactive department symposiums, student presentations, workshops, and guest lectures with interactive display.',
     minCapacity: 50,
     maxCapacity: 80,
     recommendedCapacity: 65,
@@ -108,7 +102,7 @@ export const INITIAL_VENUES: Venue[] = [
     equipment: ['Projector and display screen', 'Wireless microphone', 'Speakers and sound system', 'Air conditioning', 'Whiteboard', 'Wi-Fi', 'Podium'],
     operatingHours: { start: '08:30', end: '19:30' },
     accessibilityFeatures: ['Elevator Access', 'Wide Aisles'],
-    imageUrl: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '',
     isActive: true,
     maintenanceStatus: 'normal',
     approvalRequired: true,
@@ -116,418 +110,18 @@ export const INITIAL_VENUES: Venue[] = [
     locationNotes: 'Ramanujan Block, 1st Floor, Room R-108',
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z'
-  },
-  // 5. ADDITIONAL DEMO VENUE
-  {
-    id: 'venue-conf-a',
-    name: 'Conference Room A',
-    block: 'Academic Administration Block',
-    venueType: 'Conference Room',
-    description: '[Demonstration Venue] Executive conference facility featuring an oval boardroom table, dual 4K monitors, and all-in-one conferencing bar for administrative meetings.',
-    minCapacity: 8,
-    maxCapacity: 20,
-    recommendedCapacity: 18,
-    facilities: ['Executive Swivel Chairs', 'Center Audio Pick-Up', 'Integrated Cable Troughs', 'Whiteboard Wall'],
-    equipment: ['Projector and display screen', 'Video conferencing equipment', 'Air conditioning', 'Whiteboard', 'Wi-Fi'],
-    operatingHours: { start: '09:00', end: '18:00' },
-    accessibilityFeatures: ['Level Access', 'Elevator Access'],
-    imageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
-    isActive: true,
-    maintenanceStatus: 'normal',
-    approvalRequired: true,
-    isDemoVenue: true,
-    locationNotes: 'Administration Block, Level 3, Executive Suite',
-    createdAt: '2025-01-01T00:00:00Z',
-    updatedAt: '2025-01-01T00:00:00Z'
-  },
-  // 6. ADDITIONAL DEMO VENUE
-  {
-    id: 'venue-innov-lab',
-    name: 'Innovation Lab',
-    block: 'Innovation and Research Block',
-    venueType: 'Lab',
-    description: '[Demonstration Venue] Collaborative design sprint and hackathon space with movable wheeled tables, interactive smart boards, and maker equipment.',
-    minCapacity: 15,
-    maxCapacity: 40,
-    recommendedCapacity: 35,
-    facilities: ['Modular Wheeled Desks', 'High Density Gigabit LAN', 'Dry Erase Glass Walls'],
-    equipment: ['Projector and display screen', 'Whiteboard', 'Wi-Fi', 'Air conditioning'],
-    operatingHours: { start: '08:00', end: '22:00' },
-    accessibilityFeatures: ['Ground Floor Level Entry', 'Wide Wheelchair Pathways'],
-    imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
-    isActive: true,
-    maintenanceStatus: 'normal',
-    approvalRequired: true,
-    isDemoVenue: true,
-    locationNotes: 'Innovation Block, Ground Floor Lab 02',
-    createdAt: '2025-01-01T00:00:00Z',
-    updatedAt: '2025-01-01T00:00:00Z'
-  },
-  // 7. ADDITIONAL DEMO VENUE
-  {
-    id: 'venue-amphi',
-    name: 'Open-Air Amphitheatre',
-    block: 'Central Campus',
-    venueType: 'Open-Air Facility',
-    description: '[Demonstration Venue] Scenic semicircular outdoor amphitheatre surrounded by greenery, ideal for street plays, music recitals, student forums, and cultural evenings.',
-    minCapacity: 50,
-    maxCapacity: 300,
-    recommendedCapacity: 250,
-    facilities: ['Tiered Granite Seating', 'Raised Circular Stage', 'Evening Architectural Lighting'],
-    equipment: ['Wireless microphone', 'Speakers and sound system', 'Podium'],
-    operatingHours: { start: '16:00', end: '21:30' },
-    accessibilityFeatures: ['Ramped Access to Lower Ring'],
-    imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80',
-    isActive: true,
-    maintenanceStatus: 'normal',
-    approvalRequired: true,
-    isDemoVenue: true,
-    locationNotes: 'Central Campus Lawn, Beside Food Court',
-    createdAt: '2025-01-01T00:00:00Z',
-    updatedAt: '2025-01-01T00:00:00Z'
-  },
-  // 8. ADDITIONAL DEMO VENUE
-  {
-    id: 'venue-boardroom-b',
-    name: 'Boardroom B',
-    block: 'Academic Administration Block',
-    venueType: 'Boardroom',
-    description: '[Demonstration Venue] Intimate high-level boardroom for academic council sub-committees, external review panels, and research dissertation defenses.',
-    minCapacity: 6,
-    maxCapacity: 15,
-    recommendedCapacity: 12,
-    facilities: ['Solid Teak Wood Board Table', 'Acoustic Sound Insulation', 'Padded High-Back Armchairs'],
-    equipment: ['Projector and display screen', 'Video conferencing equipment', 'Air conditioning', 'Wi-Fi'],
-    operatingHours: { start: '09:00', end: '18:00' },
-    accessibilityFeatures: ['Elevator Access'],
-    imageUrl: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=800&q=80',
-    isActive: true,
-    maintenanceStatus: 'normal',
-    approvalRequired: true,
-    isDemoVenue: true,
-    locationNotes: 'Administration Block, Level 2, Room A-202',
-    createdAt: '2025-01-01T00:00:00Z',
-    updatedAt: '2025-01-01T00:00:00Z'
   }
 ]
 
-// Today calculation helper for dynamic calendar dates around current date
-const getRelativeDate = (offsetDays: number): string => {
-  const d = new Date()
-  d.setDate(d.getDate() + offsetDays)
-  return d.toISOString().split('T')[0]
-}
+/**
+ * CLEAN INITIAL DATA
+ * No pre-existing bookings, maintenance blocks, notifications, or history.
+ * An organizer must register first, submit a booking, and the administrator will accept or reject it.
+ */
+export const INITIAL_BOOKINGS: Booking[] = []
 
-export const INITIAL_BOOKINGS: Booking[] = [
-  {
-    id: 'book-001',
-    referenceCode: 'NMAMIT-2026-A1092',
-    organizerId: 'user-nnm23is046',
-    organizerName: 'NNM23IS046',
-    organizerEmail: 'nnm23is046@nmamit.in',
-    organizerPhone: '+91 98450 12345',
-    department: 'Department of Information Science & Engineering',
-    eventTitle: 'National Seminar on Quantum Computing Architectures',
-    eventDescription: 'Two-day national technical seminar with distinguished keynote speakers from IISc Bengaluru and IIT Madras. In-depth technical sessions on NISQ systems and quantum algorithms.',
-    eventCategory: 'seminar',
-    expectedAttendees: 85,
-    visibility: 'public',
-    requestedVenueId: 'venue-nandini',
-    assignedVenueId: 'venue-nandini',
-    requestedDate: getRelativeDate(2),
-    requestedStart: '09:30',
-    requestedEnd: '13:00',
-    setupStart: '09:00',
-    cleanupEnd: '13:30',
-    equipment: [
-      { name: 'Projector and display screen', isMandatory: true },
-      { name: 'Wireless microphone', isMandatory: true },
-      { name: 'Speakers and sound system', isMandatory: true },
-      { name: 'Air conditioning', isMandatory: true },
-      { name: 'Podium', isMandatory: false }
-    ],
-    additionalNotes: 'Catering will be set up outside the hall foyer. Technical AV engineer required during inaugural session.',
-    status: 'Approved',
-    reviewNotes: 'Verified audience capacity and speaker tech requirements. Approved as per academic calendar clearance.',
-    reviewedBy: 'user-admin-1',
-    reviewedByName: 'Campus Administrator',
-    reviewedAt: '2026-03-20T11:00:00Z',
-    qrCheckInToken: 'TOKEN_A1092_QC2026_VALID',
-    createdAt: '2026-03-18T10:15:00Z',
-    updatedAt: '2026-03-20T11:00:00Z'
-  },
-  {
-    id: 'book-002',
-    referenceCode: 'NMAMIT-2026-B8841',
-    organizerId: 'user-nnm23is046',
-    organizerName: 'NNM23IS046',
-    organizerEmail: 'nnm23is046@nmamit.in',
-    organizerPhone: '+91 98450 12345',
-    department: 'Department of Information Science & Engineering',
-    eventTitle: 'HackNitte 2026: 24-Hour Hackathon Grand Finale',
-    eventDescription: 'The culminating evaluation and keynote pitches for the inter-collegiate hackathon. 30 shortlisted student teams showcasing their IoT and AI prototypes before industry judges.',
-    eventCategory: 'technical_event',
-    expectedAttendees: 420,
-    visibility: 'public',
-    requestedVenueId: 'venue-sambhram',
-    assignedVenueId: 'venue-sambhram',
-    requestedDate: getRelativeDate(5),
-    requestedStart: '14:00',
-    requestedEnd: '19:00',
-    setupStart: '13:00',
-    cleanupEnd: '19:30',
-    equipment: [
-      { name: 'Projector and display screen', isMandatory: true },
-      { name: 'Wireless microphone', isMandatory: true },
-      { name: 'Speakers and sound system', isMandatory: true },
-      { name: 'Air conditioning', isMandatory: true },
-      { name: 'Recording equipment', isMandatory: true },
-      { name: 'Video conferencing equipment', isMandatory: false }
-    ],
-    additionalNotes: 'Requires 6 roving wireless microphones for jury QA and live stage video feed.',
-    status: 'Approved',
-    reviewNotes: 'Sambhram Hall allocation approved. Campus security informed for evening session.',
-    reviewedBy: 'user-admin-1',
-    reviewedByName: 'Campus Administrator',
-    reviewedAt: '2026-03-22T16:00:00Z',
-    qrCheckInToken: 'TOKEN_B8841_HN2026_VALID',
-    createdAt: '2026-03-19T14:30:00Z',
-    updatedAt: '2026-03-22T16:00:00Z'
-  },
-  {
-    id: 'book-003',
-    referenceCode: 'NMAMIT-2026-C4410',
-    organizerId: 'user-nnm23is046',
-    organizerName: 'NNM23IS046',
-    organizerEmail: 'nnm23is046@nmamit.in',
-    organizerPhone: '+91 98450 12345',
-    department: 'Department of Information Science & Engineering',
-    eventTitle: 'Workshop on Microservices Architecture & Kubernetes',
-    eventDescription: 'Hands-on laboratory workshop for 6th and 8th semester undergraduates and M.Tech scholars. Industry architects demonstrating containerized deployments.',
-    eventCategory: 'workshop',
-    expectedAttendees: 60,
-    visibility: 'campus_only',
-    requestedVenueId: 'venue-phalguni',
-    assignedVenueId: 'venue-phalguni',
-    requestedDate: getRelativeDate(3),
-    requestedStart: '10:00',
-    requestedEnd: '16:00',
-    setupStart: '09:30',
-    cleanupEnd: '16:30',
-    equipment: [
-      { name: 'Projector and display screen', isMandatory: true },
-      { name: 'Air conditioning', isMandatory: true },
-      { name: 'Whiteboard', isMandatory: true },
-      { name: 'Wi-Fi', isMandatory: true },
-      { name: 'Wireless microphone', isMandatory: false }
-    ],
-    additionalNotes: 'High-bandwidth campus Wi-Fi access credentials needed for cloud cluster access.',
-    status: 'Approved',
-    reviewNotes: 'Phalguni Hall booked. Wi-Fi network team notified for cluster bandwidth.',
-    reviewedBy: 'user-admin-1',
-    reviewedByName: 'Campus Administrator',
-    reviewedAt: '2026-03-21T09:45:00Z',
-    qrCheckInToken: 'TOKEN_C4410_WS2026_VALID',
-    createdAt: '2026-03-17T11:20:00Z',
-    updatedAt: '2026-03-21T09:45:00Z'
-  },
-  {
-    id: 'book-004',
-    referenceCode: 'NMAMIT-2026-D9902',
-    organizerId: 'user-nnm23is046',
-    organizerName: 'NNM23IS046',
-    organizerEmail: 'nnm23is046@nmamit.in',
-    organizerPhone: '+91 98450 12345',
-    department: 'Department of Information Science & Engineering',
-    eventTitle: 'Youth Leadership & Public Speaking BootCamp',
-    eventDescription: 'Interactive orientation focusing on parliamentary debate, keynote delivery, and leadership communication.',
-    eventCategory: 'club_activity',
-    expectedAttendees: 140,
-    visibility: 'campus_only',
-    requestedVenueId: 'venue-shambavi',
-    requestedDate: getRelativeDate(4),
-    requestedStart: '14:30',
-    requestedEnd: '17:30',
-    setupStart: '14:00',
-    cleanupEnd: '18:00',
-    equipment: [
-      { name: 'Projector and display screen', isMandatory: true },
-      { name: 'Wireless microphone', isMandatory: true },
-      { name: 'Speakers and sound system', isMandatory: true },
-      { name: 'Air conditioning', isMandatory: true },
-      { name: 'Podium', isMandatory: false }
-    ],
-    additionalNotes: 'Requires collar mic for guest orator and roving mics for audience participation.',
-    status: 'Pending Approval',
-    createdAt: '2026-03-23T10:00:00Z',
-    updatedAt: '2026-03-23T10:00:00Z'
-  },
-  {
-    id: 'book-005',
-    referenceCode: 'NMAMIT-2026-E5114',
-    organizerId: 'user-nnm23is046',
-    organizerName: 'NNM23IS046',
-    organizerEmail: 'nnm23is046@nmamit.in',
-    organizerPhone: '+91 98450 12345',
-    department: 'Department of Information Science & Engineering',
-    eventTitle: 'Criteria Peer Committee Review Meeting',
-    eventDescription: 'Review of institutional academic audit documents with departmental criteria heads and university liaison officer.',
-    eventCategory: 'meeting',
-    expectedAttendees: 16,
-    visibility: 'private_invited',
-    requestedVenueId: 'venue-conf-a',
-    requestedDate: getRelativeDate(1),
-    requestedStart: '14:00',
-    requestedEnd: '16:30',
-    setupStart: '13:45',
-    cleanupEnd: '16:45',
-    equipment: [
-      { name: 'Projector and display screen', isMandatory: true },
-      { name: 'Video conferencing equipment', isMandatory: true },
-      { name: 'Air conditioning', isMandatory: true }
-    ],
-    additionalNotes: 'Strictly confidential academic review.',
-    status: 'Under Review',
-    reviewNotes: 'Under evaluation by Campus Administration. Checking admin block schedules.',
-    reviewedBy: 'user-admin-1',
-    reviewedByName: 'Campus Administrator',
-    reviewedAt: '2026-03-24T08:30:00Z',
-    createdAt: '2026-03-23T15:20:00Z',
-    updatedAt: '2026-03-24T08:30:00Z'
-  },
-  {
-    id: 'book-006',
-    referenceCode: 'NMAMIT-2026-F7719',
-    organizerId: 'user-nnm23is046',
-    organizerName: 'NNM23IS046',
-    organizerEmail: 'nnm23is046@nmamit.in',
-    organizerPhone: '+91 98450 12345',
-    department: 'Department of Information Science & Engineering',
-    eventTitle: 'Acoustic Jam Night - Sunset Melodies',
-    eventDescription: 'Unplugged musical performance featuring student bands and instrumental duos.',
-    eventCategory: 'cultural_event',
-    expectedAttendees: 220,
-    visibility: 'public',
-    requestedVenueId: 'venue-amphi',
-    assignedVenueId: 'venue-amphi',
-    requestedDate: getRelativeDate(7),
-    requestedStart: '17:30',
-    requestedEnd: '20:30',
-    setupStart: '16:30',
-    cleanupEnd: '21:00',
-    equipment: [
-      { name: 'Wireless microphone', isMandatory: true },
-      { name: 'Speakers and sound system', isMandatory: true }
-    ],
-    additionalNotes: 'Sound level control adheres to institutional quiet-hours past 20:30.',
-    status: 'Approved',
-    reviewNotes: 'Approved. Event must strictly conclude by 20:30 PM.',
-    reviewedBy: 'user-admin-1',
-    reviewedByName: 'Campus Administrator',
-    reviewedAt: '2026-03-22T17:00:00Z',
-    qrCheckInToken: 'TOKEN_F7719_AJ2026_VALID',
-    createdAt: '2026-03-20T18:00:00Z',
-    updatedAt: '2026-03-22T17:00:00Z'
-  },
-  {
-    id: 'book-007',
-    referenceCode: 'NMAMIT-2026-G1203',
-    organizerId: 'user-nnm23is046',
-    organizerName: 'NNM23IS046',
-    organizerEmail: 'nnm23is046@nmamit.in',
-    organizerPhone: '+91 98450 12345',
-    department: 'Department of Information Science & Engineering',
-    eventTitle: 'Campus Placement Prep: Mock Technical Interviews',
-    eventDescription: 'Interview readiness drive for pre-final year students with visiting alumni.',
-    eventCategory: 'workshop',
-    expectedAttendees: 75,
-    visibility: 'campus_only',
-    requestedVenueId: 'venue-nandini',
-    requestedDate: getRelativeDate(2),
-    requestedStart: '10:00',
-    requestedEnd: '12:30',
-    setupStart: '09:45',
-    cleanupEnd: '12:45',
-    equipment: [
-      { name: 'Projector and display screen', isMandatory: true },
-      { name: 'Air conditioning', isMandatory: true }
-    ],
-    status: 'Rejected',
-    rejectionReason: 'Time slot strictly overlaps with National Seminar on Quantum Computing (NMAMIT-2026-A1092). Please reschedule to afternoon or choose Phalguni Hall.',
-    reviewedBy: 'user-admin-1',
-    reviewedByName: 'Campus Administrator',
-    reviewedAt: '2026-03-21T12:00:00Z',
-    createdAt: '2026-03-20T14:00:00Z',
-    updatedAt: '2026-03-21T12:00:00Z'
-  }
-]
+export const INITIAL_MAINTENANCE_BLOCKS: VenueMaintenanceBlock[] = []
 
-export const INITIAL_MAINTENANCE_BLOCKS: VenueMaintenanceBlock[] = [
-  {
-    id: 'maint-001',
-    venueId: 'venue-sambhram',
-    venueName: 'Sambhram Hall',
-    blockedStart: `${getRelativeDate(10)}T08:00:00Z`,
-    blockedEnd: `${getRelativeDate(10)}T18:00:00Z`,
-    reason: 'Semi-annual stage acoustic calibration, motorized curtain lubrication, and projector lamp servicing by authorized OEM technician.',
-    createdBy: 'Campus Administrator',
-    createdAt: '2026-03-15T09:00:00Z'
-  }
-]
+export const INITIAL_NOTIFICATIONS: NotificationItem[] = []
 
-export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 'notif-1',
-    userId: 'user-nnm23is046',
-    bookingId: 'book-001',
-    title: 'Booking Approved: Quantum Computing Seminar',
-    message: 'Your booking request for Nandini Seminar Hall has been approved by Campus Administration.',
-    type: 'success',
-    isRead: false,
-    createdAt: '2026-03-20T11:00:00Z'
-  },
-  {
-    id: 'notif-2',
-    userId: 'user-admin-1',
-    bookingId: 'book-004',
-    title: 'New Booking Awaiting Review',
-    message: 'NNM23IS046 submitted a request for Shambavi Seminar Hall on ' + getRelativeDate(4) + '.',
-    type: 'warning',
-    isRead: false,
-    createdAt: '2026-03-23T10:00:00Z'
-  },
-  {
-    id: 'notif-3',
-    userId: 'user-nnm23is046',
-    bookingId: 'book-007',
-    title: 'Booking Request Rejected',
-    message: 'Nandini Seminar Hall request was rejected due to scheduling conflict. Click to view reason and pick an alternative slot.',
-    type: 'danger',
-    isRead: true,
-    createdAt: '2026-03-21T12:00:00Z'
-  }
-]
-
-export const INITIAL_HISTORY: BookingHistoryItem[] = [
-  {
-    id: 'hist-001',
-    bookingId: 'book-001',
-    previousStatus: 'Draft',
-    newStatus: 'Pending Approval',
-    changedBy: 'user-nnm23is046',
-    changedByName: 'NNM23IS046',
-    comments: 'Request submitted with complete faculty authorization.',
-    createdAt: '2026-03-18T10:15:00Z'
-  },
-  {
-    id: 'hist-002',
-    bookingId: 'book-001',
-    previousStatus: 'Pending Approval',
-    newStatus: 'Approved',
-    changedBy: 'user-admin-1',
-    changedByName: 'Campus Administrator',
-    comments: 'Approved with full AV technician clearance.',
-    createdAt: '2026-03-20T11:00:00Z'
-  }
-]
-
+export const INITIAL_HISTORY: BookingHistoryItem[] = []

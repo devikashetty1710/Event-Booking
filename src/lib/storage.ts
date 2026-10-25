@@ -1,16 +1,17 @@
-import { Venue, Booking, BookingHistoryItem, NotificationItem, VenueMaintenanceBlock, UserProfile } from '@/types'
+import { Venue, Booking, BookingHistoryItem, NotificationItem, VenueMaintenanceBlock, UserProfile, UserRole } from '@/types'
 import { INITIAL_VENUES, INITIAL_BOOKINGS, INITIAL_MAINTENANCE_BLOCKS, INITIAL_NOTIFICATIONS, INITIAL_HISTORY, INITIAL_USERS } from './demoData'
 import { generateReferenceCode, generateCheckInToken } from './utils'
 import { checkVenueAvailability } from './recommendations'
 import { supabase, isSupabaseConfigured } from './supabase'
+import { recordEventHistory, fetchEventHistoryByBookingId, fetchAllEventHistory } from './eventHistoryDB'
 
 const STORAGE_KEYS = {
-  VENUES: 'nitte_campusconnect_venues_v1',
-  BOOKINGS: 'nitte_campusconnect_bookings_v1',
-  BLOCKS: 'nitte_campusconnect_maint_blocks_v1',
-  NOTIFICATIONS: 'nitte_campusconnect_notifications_v1',
-  HISTORY: 'nitte_campusconnect_history_v1',
-  USERS: 'nitte_campusconnect_users_v1'
+  VENUES: 'nitte_campusconnect_venues_v2_clean',
+  BOOKINGS: 'nitte_campusconnect_bookings_v2_clean',
+  BLOCKS: 'nitte_campusconnect_maint_blocks_v2_clean',
+  NOTIFICATIONS: 'nitte_campusconnect_notifications_v2_clean',
+  HISTORY: 'nitte_campusconnect_history_v2_clean',
+  USERS: 'nitte_campusconnect_users_v2_clean'
 }
 
 // In-memory cache + localStorage sync
@@ -173,19 +174,23 @@ export async function createBookingRequest(newBooking: Omit<Booking, 'id' | 'ref
   bookings.unshift(booking)
   localStore.saveBookings(bookings)
 
-  // Append history
-  const history = localStore.getHistory()
-  history.unshift({
+  // Append history to Persistent DB & LocalStore
+  const venues = localStore.getVenues()
+  const venueObj = venues.find(v => v.id === newBooking.requestedVenueId)
+  await recordEventHistory({
     id: `hist-${Date.now()}`,
     bookingId: newId,
+    eventTitle: newBooking.eventTitle,
+    venueName: venueObj?.name || 'Requested Venue',
     previousStatus: 'Draft',
     newStatus: 'Pending Approval',
+    actionType: 'Created',
     changedBy: newBooking.organizerId,
     changedByName: newBooking.organizerName,
+    changedByRole: 'user',
     comments: 'Booking request created and submitted for administrator review.',
     createdAt: now
   })
-  localStore.saveHistory(history)
 
   // Notify Administrators
   const notifs = localStore.getNotifications()
@@ -210,8 +215,17 @@ export async function approveBookingTransactional(params: {
   assignedVenueId: string
   reviewerId: string
   reviewerName: string
+  reviewerRole?: UserRole
   reviewNotes?: string
 }): Promise<{ success: boolean; error?: string; booking?: Booking }> {
+  // CRITICAL AUTHORIZATION CHECK: Only Campus Administrator has authority to approve!
+  if (params.reviewerRole && params.reviewerRole !== 'admin') {
+    return {
+      success: false,
+      error: 'Security Authorization Error: Only Campus Administrators possess credentials and authority to approve booking reservations.'
+    }
+  }
+
   const bookings = localStore.getBookings()
   const bookingIndex = bookings.findIndex(b => b.id === params.bookingId)
 
@@ -259,19 +273,23 @@ export async function approveBookingTransactional(params: {
   bookings[bookingIndex] = updatedBooking
   localStore.saveBookings(bookings)
 
-  // Audit history
-  const history = localStore.getHistory()
-  history.unshift({
+  // Audit history persistent DB insertion
+  const venues = localStore.getVenues()
+  const venueObj = venues.find(v => v.id === targetVenueId)
+  await recordEventHistory({
     id: `hist-${Date.now()}`,
     bookingId: booking.id,
+    eventTitle: booking.eventTitle,
+    venueName: venueObj?.name || targetVenueId,
     previousStatus: booking.status,
     newStatus: 'Approved',
+    actionType: 'Approved',
     changedBy: params.reviewerId,
     changedByName: params.reviewerName,
+    changedByRole: 'admin',
     comments: params.reviewNotes || 'Booking approved and scheduled onto campus calendar.',
     createdAt: now
   })
-  localStore.saveHistory(history)
 
   // Notify Organizer
   const notifs = localStore.getNotifications()
@@ -295,8 +313,17 @@ export async function rejectBooking(params: {
   bookingId: string
   reviewerId: string
   reviewerName: string
+  reviewerRole?: UserRole
   rejectionReason: string
 }): Promise<{ success: boolean; error?: string }> {
+  // CRITICAL AUTHORIZATION CHECK: Only Campus Administrator has authority to reject!
+  if (params.reviewerRole && params.reviewerRole !== 'admin') {
+    return {
+      success: false,
+      error: 'Security Authorization Error: Only Campus Administrators possess credentials and authority to reject booking reservations.'
+    }
+  }
+
   if (!params.rejectionReason || !params.rejectionReason.trim()) {
     return { success: false, error: 'A mandatory rejection reason must be provided to the organizer.' }
   }
@@ -319,21 +346,25 @@ export async function rejectBooking(params: {
   }
   localStore.saveBookings(bookings)
 
-  // History
-  const history = localStore.getHistory()
-  history.unshift({
+  // Audit history persistent DB insertion
+  const venues = localStore.getVenues()
+  const venueObj = venues.find(v => v.id === (booking.assignedVenueId || booking.requestedVenueId))
+  await recordEventHistory({
     id: `hist-${Date.now()}`,
     bookingId: booking.id,
+    eventTitle: booking.eventTitle,
+    venueName: venueObj?.name || 'Campus Venue',
     previousStatus: booking.status,
     newStatus: 'Rejected',
+    actionType: 'Rejected',
     changedBy: params.reviewerId,
     changedByName: params.reviewerName,
-    comments: `Rejected: ${params.rejectionReason}`,
+    changedByRole: 'admin',
+    comments: `Rejected by administration: ${params.rejectionReason}`,
     createdAt: now
   })
-  localStore.saveHistory(history)
 
-  // Notify
+  // Notify Organizer
   const notifs = localStore.getNotifications()
   notifs.unshift({
     id: `notif-${Date.now()}`,
@@ -388,19 +419,23 @@ export async function reassignBooking(params: {
   }
   localStore.saveBookings(bookings)
 
-  // History
-  const history = localStore.getHistory()
-  history.unshift({
+  // Persistent event history DB
+  const venues = localStore.getVenues()
+  const venueObj = venues.find(v => v.id === params.newVenueId)
+  await recordEventHistory({
     id: `hist-${Date.now()}`,
     bookingId: booking.id,
+    eventTitle: booking.eventTitle,
+    venueName: venueObj?.name || params.newVenueId,
     previousStatus: booking.status,
     newStatus: booking.status,
+    actionType: 'Reassigned',
     changedBy: params.reviewerId,
     changedByName: params.reviewerName,
-    comments: `Venue reassigned to ${params.newVenueId}. Reason: ${params.reason}`,
+    changedByRole: 'admin',
+    comments: `Venue reassigned to ${venueObj?.name || params.newVenueId}. Reason: ${params.reason}`,
     createdAt: now
   })
-  localStore.saveHistory(history)
 
   notifySubscribers()
   return { success: true }
@@ -427,18 +462,23 @@ export async function cancelBooking(params: {
   }
   localStore.saveBookings(bookings)
 
-  const history = localStore.getHistory()
-  history.unshift({
+  // Persistent event history DB
+  const venues = localStore.getVenues()
+  const venueObj = venues.find(v => v.id === (booking.assignedVenueId || booking.requestedVenueId))
+  await recordEventHistory({
     id: `hist-${Date.now()}`,
     bookingId: booking.id,
+    eventTitle: booking.eventTitle,
+    venueName: venueObj?.name || 'Campus Venue',
     previousStatus: booking.status,
     newStatus: 'Cancelled',
+    actionType: 'Cancelled',
     changedBy: params.userId,
     changedByName: params.userName,
+    changedByRole: 'user',
     comments: `Cancelled: ${params.reason}`,
     createdAt: now
   })
-  localStore.saveHistory(history)
 
   notifySubscribers()
   return { success: true }
@@ -497,6 +537,7 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
 }
 
 export async function fetchBookingHistory(bookingId: string): Promise<BookingHistoryItem[]> {
-  const history = localStore.getHistory()
-  return history.filter(h => h.bookingId === bookingId)
+  return fetchEventHistoryByBookingId(bookingId)
 }
+
+export { fetchAllEventHistory, recordEventHistory } from './eventHistoryDB'

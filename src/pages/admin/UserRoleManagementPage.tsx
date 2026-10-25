@@ -57,7 +57,8 @@ export const UserRoleManagementPage: React.FC = () => {
               <tr>
                 <th className="py-3 px-4">Member</th>
                 <th className="py-3 px-4">Department / Committee</th>
-                <th className="py-3 px-4">Email & Domain Status</th>
+                <th className="py-3 px-4">Email & Domain</th>
+                <th className="py-3 px-4">Credentials Status</th>
                 <th className="py-3 px-4">System Role</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
@@ -90,6 +91,15 @@ export const UserRoleManagementPage: React.FC = () => {
                     <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-medium">
                       <ShieldCheck className="w-3 h-3" />
                       Verified Domain
+                    </span>
+                  </td>
+
+                  <td className="py-3 px-4">
+                    <span className="font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded text-slate-700 border border-slate-200">
+                      {u.password ? '••••••••' : (u.role === 'admin' ? 'Admin@123' : 'User@123')}
+                    </span>
+                    <span className="block text-[10px] text-slate-400 mt-0.5">
+                      {u.role === 'admin' ? 'Admin Credential Active' : 'Organizer Credential'}
                     </span>
                   </td>
 

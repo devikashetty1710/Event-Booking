@@ -120,22 +120,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {realVenues.map((venue) => (
             <Card key={venue.id} hoverable className="group border-slate-200">
-              <div className="relative h-40 overflow-hidden bg-slate-100">
-                <img
-                  src={venue.imageUrl}
-                  alt={venue.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
-                <div className="absolute top-2.5 left-2.5">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-900/90 text-white backdrop-blur-md">
-                    ★ Official
+              <div className="p-4 bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-t-xl relative overflow-hidden">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-indigo-300">
+                    <Building2 className="w-4 h-4" />
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-200 border border-blue-400/30">
+                    {venue.venueType}
                   </span>
                 </div>
-                <div className="absolute bottom-2 left-3 right-3 text-white">
-                  <span className="text-[10px] text-slate-300 block">{venue.block}</span>
-                  <h3 className="font-bold text-xs font-heading truncate">{venue.name}</h3>
-                </div>
+                <span className="text-[10px] text-slate-300 block">{venue.block}</span>
+                <h3 className="font-bold text-xs font-heading truncate text-white">{venue.name}</h3>
               </div>
 
               <div className="p-3.5 space-y-2 text-xs">
