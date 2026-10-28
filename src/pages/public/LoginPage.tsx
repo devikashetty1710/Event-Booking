@@ -53,7 +53,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMsg(null)
     setSuccessMsg(null)
@@ -75,7 +75,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         return
       }
 
-      const res = login({
+      const res = await login({
         email,
         password,
         fullName: fullName.trim(),
@@ -95,7 +95,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
     // Login for Organizer or Admin
     const targetRole = activeTab === 'admin-login' ? 'admin' : 'user'
-    const res = login({
+    const res = await login({
       email,
       password,
       targetRole

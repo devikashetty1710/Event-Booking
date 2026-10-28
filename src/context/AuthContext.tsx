@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { UserProfile, UserRole } from '@/types'
-import { localStore } from '@/lib/storage'
+import { UsersDB } from '@/lib/db'
+import { initDB } from '@/lib/storage'
 import { INITIAL_USERS } from '@/lib/demoData'
 
 export interface LoginParams {
@@ -24,8 +25,9 @@ interface AuthContextType {
   isAuthenticated: boolean
   isAdmin: boolean
   isOrganizer: boolean
+  isLoading: boolean
   allowedDomains: string[]
-  login: (params: LoginParams) => AuthResponse
+  login: (params: LoginParams) => Promise<AuthResponse>
   logout: () => void
   validateAdminCredentials: (password: string) => boolean
   validateDomain: (email: string) => boolean
@@ -35,47 +37,68 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const ALLOWED_DOMAINS = ['nmamit.in', 'nitte.in']
 const ADMIN_MASTER_CREDENTIAL = 'Admin@123'
-const AUTH_STORAGE_KEY = 'nitte_campusconnect_auth_user_v2'
+
+// We store ONLY the user's ID in localStorage (not the whole object).
+// The full profile is fetched from IndexedDB on load.
+const AUTH_SESSION_KEY = 'campus_connect_session_user_id_v3'
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Fresh starts require explicit login/registration
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY)
-      if (stored) return JSON.parse(stored)
-      return null
-    } catch {
-      return null
-    }
-  })
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Ensure initial admin user exists in localStore
+  // On mount: initialise the IndexedDB, ensure admin exists, restore session
   useEffect(() => {
-    const existingUsers = localStore.getUsers()
-    const adminExists = existingUsers.some(u => u.email.toLowerCase() === 'admin@nmamit.in')
-    if (!adminExists) {
-      localStore.saveUsers([...existingUsers, INITIAL_USERS[0]])
+    let cancelled = false
+
+    async function boot() {
+      try {
+        // 1. Open IndexedDB and seed initial data if first run
+        await initDB()
+
+        // 2. Ensure admin account always exists in DB
+        const adminExists = await UsersDB.getByEmail('admin@nmamit.in')
+        if (!adminExists) {
+          await UsersDB.saveAll(INITIAL_USERS)
+        }
+
+        // 3. Restore session: look up user by stored ID
+        const storedId = localStorage.getItem(AUTH_SESSION_KEY)
+        if (storedId) {
+          const savedUser = await UsersDB.getById(storedId)
+          if (!cancelled && savedUser) {
+            setCurrentUser(savedUser)
+          }
+        }
+      } catch (err) {
+        console.error('CampusConnect DB init error:', err)
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
     }
+
+    boot()
+    return () => { cancelled = true }
   }, [])
 
+  // Persist session ID to localStorage whenever currentUser changes
   useEffect(() => {
     if (currentUser) {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(currentUser))
+      localStorage.setItem(AUTH_SESSION_KEY, currentUser.id)
     } else {
-      localStorage.removeItem(AUTH_STORAGE_KEY)
+      localStorage.removeItem(AUTH_SESSION_KEY)
     }
   }, [currentUser])
 
-  const validateDomain = (email: string): boolean => {
+  const validateDomain = useCallback((email: string): boolean => {
     const trimmed = email.trim().toLowerCase()
     return ALLOWED_DOMAINS.some(domain => trimmed.endsWith(`@${domain}`))
-  }
+  }, [])
 
-  const validateAdminCredentials = (password: string): boolean => {
+  const validateAdminCredentials = useCallback((password: string): boolean => {
     return password === ADMIN_MASTER_CREDENTIAL
-  }
+  }, [])
 
-  const login = (params: LoginParams): AuthResponse => {
+  const login = useCallback(async (params: LoginParams): Promise<AuthResponse> => {
     const trimmedEmail = params.email.trim().toLowerCase()
     const password = params.password?.trim() || ''
 
@@ -90,13 +113,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    const allUsers = localStore.getUsers()
-    let foundUser = allUsers.find(u => u.email.toLowerCase() === trimmedEmail)
+    // Look up user in IndexedDB
+    let foundUser = await UsersDB.getByEmail(trimmedEmail)
 
-    // Registration Mode (Organizer must register first)
+    // ── REGISTRATION MODE ────────────────────────────────────────────────
     if (params.isRegistration) {
       if (foundUser) {
-        return { success: false, message: 'An account with this institutional email already exists. Please log in.' }
+        return {
+          success: false,
+          message: 'An account with this institutional email already exists. Please log in.'
+        }
       }
 
       if (!password || password.length < 6) {
@@ -104,10 +130,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const requestedRole = params.targetRole || 'user'
-      // If someone tries to register as Admin, verify the admin master key
+
+      // Admin registration requires the master key
       if (requestedRole === 'admin') {
         if (params.adminPasscode !== ADMIN_MASTER_CREDENTIAL) {
-          return { success: false, message: 'Invalid Admin Security Key. Only authorized campus administration officers can register as admin.' }
+          return {
+            success: false,
+            message: 'Invalid Admin Security Key. Only authorized campus administration officers can register as admin.'
+          }
         }
       }
 
@@ -121,28 +151,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         createdAt: new Date().toISOString()
       }
 
-      allUsers.push(newUser)
-      localStore.saveUsers(allUsers)
+      // Persist to IndexedDB
+      await UsersDB.save(newUser)
       setCurrentUser(newUser)
       return { success: true, user: newUser }
     }
 
-    // Login Mode
+    // ── LOGIN MODE ────────────────────────────────────────────────────────
     if (!foundUser) {
-      // Check if it's the official administrator account
+      // Special case: official admin account
       if (trimmedEmail === 'admin@nmamit.in') {
-        foundUser = INITIAL_USERS[0]
-        allUsers.push(INITIAL_USERS[0])
-        localStore.saveUsers(allUsers)
+        const adminProfile = INITIAL_USERS[0]
+        await UsersDB.save(adminProfile)
+        foundUser = adminProfile
       } else {
         return {
           success: false,
-          message: 'Account not found. Please click "Register" above to create your organizer account first.'
+          message: 'Account not found. Please click "Register" to create your organizer account first.'
         }
       }
     }
 
-    // Role-specific credential validation
+    // Credential validation
     if (foundUser.role === 'admin' || params.targetRole === 'admin') {
       const requiredPassword = foundUser.password || ADMIN_MASTER_CREDENTIAL
       if (password !== requiredPassword && password !== ADMIN_MASTER_CREDENTIAL) {
@@ -152,7 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } else {
-      // Organizer credentials validation
+      // Organizer validation
       if (foundUser.password && password !== foundUser.password) {
         return {
           success: false,
@@ -163,12 +193,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setCurrentUser(foundUser)
     return { success: true, user: foundUser }
-  }
+  }, [validateDomain])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setCurrentUser(null)
-    localStorage.removeItem(AUTH_STORAGE_KEY)
-  }
+    localStorage.removeItem(AUTH_SESSION_KEY)
+  }, [])
 
   return (
     <AuthContext.Provider
@@ -177,6 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!currentUser,
         isAdmin: currentUser?.role === 'admin',
         isOrganizer: currentUser?.role === 'user',
+        isLoading,
         allowedDomains: ALLOWED_DOMAINS,
         login,
         logout,
@@ -196,3 +227,4 @@ export function useAuth() {
   }
   return context
 }
+

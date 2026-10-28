@@ -22,7 +22,7 @@ export const ProfileSettingsPage: React.FC = () => {
 
   const handleResetData = async () => {
     if (window.confirm('Reset all venues, bookings, and database event history back to initial clean state?')) {
-      localStore.resetAll()
+      await localStore.resetAll()
       await clearEventHistoryDB()
       setResetFeedback('Clean database reset successfully. Refreshing...')
       setTimeout(() => {

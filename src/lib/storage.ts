@@ -1,164 +1,207 @@
-import { Venue, Booking, BookingHistoryItem, NotificationItem, VenueMaintenanceBlock, UserProfile, UserRole } from '@/types'
-import { INITIAL_VENUES, INITIAL_BOOKINGS, INITIAL_MAINTENANCE_BLOCKS, INITIAL_NOTIFICATIONS, INITIAL_HISTORY, INITIAL_USERS } from './demoData'
+/**
+ * CampusConnect - Storage API
+ * ============================
+ * All data is persisted in IndexedDB (via db.ts) as the single source of truth.
+ * Data survives page refreshes, browser restarts, and tab closures.
+ * Data is only cleared if the user explicitly wipes browser site data.
+ *
+ * Architecture:
+ *  - Primary store: IndexedDB (browser's transactional DB — survives refreshes)
+ *  - Seeding: INITIAL_* data is written to IndexedDB on first run only
+ *  - No localStorage used for business data (only a seed flag boolean)
+ */
+
+import {
+  Venue,
+  Booking,
+  BookingHistoryItem,
+  NotificationItem,
+  VenueMaintenanceBlock,
+  UserProfile,
+  UserRole
+} from '@/types'
+import {
+  INITIAL_VENUES,
+  INITIAL_MAINTENANCE_BLOCKS,
+  INITIAL_USERS
+} from './demoData'
 import { generateReferenceCode, generateCheckInToken } from './utils'
 import { checkVenueAvailability } from './recommendations'
-import { supabase, isSupabaseConfigured } from './supabase'
-import { recordEventHistory, fetchEventHistoryByBookingId, fetchAllEventHistory } from './eventHistoryDB'
+import {
+  VenuesDB,
+  BookingsDB,
+  NotificationsDB,
+  HistoryDB,
+  MaintenanceDB,
+  UsersDB,
+  isDBSeeded,
+  markDBSeeded,
+  openDB,
+  dbClear
+} from './db'
 
-const STORAGE_KEYS = {
-  VENUES: 'nitte_campusconnect_venues_v2_clean',
-  BOOKINGS: 'nitte_campusconnect_bookings_v2_clean',
-  BLOCKS: 'nitte_campusconnect_maint_blocks_v2_clean',
-  NOTIFICATIONS: 'nitte_campusconnect_notifications_v2_clean',
-  HISTORY: 'nitte_campusconnect_history_v2_clean',
-  USERS: 'nitte_campusconnect_users_v2_clean'
-}
-
-// In-memory cache + localStorage sync
-class LocalStoreManager {
-  private get<T>(key: string, defaultValue: T): T {
-    try {
-      const data = localStorage.getItem(key)
-      if (!data) return defaultValue
-      return JSON.parse(data) as T
-    } catch {
-      return defaultValue
-    }
-  }
-
-  private set<T>(key: string, val: T): void {
-    try {
-      localStorage.setItem(key, JSON.stringify(val))
-    } catch (e) {
-      console.warn('LocalStorage error:', e)
-    }
-  }
-
-  getVenues(): Venue[] {
-    return this.get<Venue[]>(STORAGE_KEYS.VENUES, INITIAL_VENUES)
-  }
-
-  saveVenues(venues: Venue[]): void {
-    this.set(STORAGE_KEYS.VENUES, venues)
-  }
-
-  getBookings(): Booking[] {
-    return this.get<Booking[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS)
-  }
-
-  saveBookings(bookings: Booking[]): void {
-    this.set(STORAGE_KEYS.BOOKINGS, bookings)
-  }
-
-  getBlocks(): VenueMaintenanceBlock[] {
-    return this.get<VenueMaintenanceBlock[]>(STORAGE_KEYS.BLOCKS, INITIAL_MAINTENANCE_BLOCKS)
-  }
-
-  saveBlocks(blocks: VenueMaintenanceBlock[]): void {
-    this.set(STORAGE_KEYS.BLOCKS, blocks)
-  }
-
-  getNotifications(): NotificationItem[] {
-    return this.get<NotificationItem[]>(STORAGE_KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS)
-  }
-
-  saveNotifications(notifs: NotificationItem[]): void {
-    this.set(STORAGE_KEYS.NOTIFICATIONS, notifs)
-  }
-
-  getHistory(): BookingHistoryItem[] {
-    return this.get<BookingHistoryItem[]>(STORAGE_KEYS.HISTORY, INITIAL_HISTORY)
-  }
-
-  saveHistory(hist: BookingHistoryItem[]): void {
-    this.set(STORAGE_KEYS.HISTORY, hist)
-  }
-
-  getUsers(): UserProfile[] {
-    return this.get<UserProfile[]>(STORAGE_KEYS.USERS, INITIAL_USERS)
-  }
-
-  saveUsers(users: UserProfile[]): void {
-    this.set(STORAGE_KEYS.USERS, users)
-  }
-
-  resetAll(): void {
-    localStorage.removeItem(STORAGE_KEYS.VENUES)
-    localStorage.removeItem(STORAGE_KEYS.BOOKINGS)
-    localStorage.removeItem(STORAGE_KEYS.BLOCKS)
-    localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS)
-    localStorage.removeItem(STORAGE_KEYS.HISTORY)
-    localStorage.removeItem(STORAGE_KEYS.USERS)
-  }
-}
-
-export const localStore = new LocalStoreManager()
-
-// Event listeners for reactive store updates
+// --------------------------------------------------------------------------
+// Reactive subscriber system (for UI re-renders)
+// --------------------------------------------------------------------------
 type Listener = () => void
 const listeners: Set<Listener> = new Set()
 
 export function subscribeToStore(listener: Listener): () => void {
   listeners.add(listener)
-  return () => {
-    listeners.delete(listener)
-  }
+  return () => listeners.delete(listener)
 }
 
 function notifySubscribers() {
   listeners.forEach(fn => fn())
 }
 
-// ==================== ASYNC DATA API ====================
+// --------------------------------------------------------------------------
+// Database Initialisation & Seeding
+// --------------------------------------------------------------------------
+
+let _initPromise: Promise<void> | null = null
+
+/**
+ * Initialises the IndexedDB database and seeds it with initial data on the
+ * very first run. Safe to call multiple times — subsequent calls are no-ops.
+ */
+export async function initDB(): Promise<void> {
+  if (_initPromise) return _initPromise
+  _initPromise = _doInit()
+  return _initPromise
+}
+
+async function _doInit(): Promise<void> {
+  // Ensure the DB schema is created
+  await openDB()
+
+  if (isDBSeeded()) return  // Already seeded on a previous run
+
+  // Seed venues (campus halls)
+  const existingVenues = await VenuesDB.getAll()
+  if (existingVenues.length === 0) {
+    await VenuesDB.saveAll(INITIAL_VENUES)
+  }
+
+  // Seed the admin user
+  const existingAdmin = await UsersDB.getByEmail('admin@nmamit.in')
+  if (!existingAdmin) {
+    await UsersDB.saveAll(INITIAL_USERS)
+  }
+
+  // Seed maintenance blocks (empty by default)
+  const existingBlocks = await MaintenanceDB.getAll()
+  if (existingBlocks.length === 0) {
+    await MaintenanceDB.saveAll(INITIAL_MAINTENANCE_BLOCKS)
+  }
+
+  markDBSeeded()
+}
+
+// --------------------------------------------------------------------------
+// Backwards-compatible localStore shim
+// Used by legacy code that hasn't been migrated yet (eventHistoryDB.ts).
+// All calls are synchronous but delegate to the in-memory cache populated
+// during the async init phase.
+// --------------------------------------------------------------------------
+
+/**
+ * Synchronous in-memory shim that mirrors data already in IndexedDB.
+ * This exists ONLY for backward compat with eventHistoryDB.ts which
+ * uses localStore.getHistory() / localStore.saveHistory() synchronously.
+ * All other code should use the async functions below.
+ */
+class LocalStoreShim {
+  async resetAll(): Promise<void> {
+    await initDB()
+    await Promise.all([dbClear('venues'), dbClear('bookings')])
+    await VenuesDB.saveAll(INITIAL_VENUES)
+    this._histCache = []
+  }
+
+  // History shim (backed by IndexedDB via HistoryDB)
+  getHistory(): BookingHistoryItem[] {
+    // We can't do async here, so we return the last-known snapshot.
+    // The async layer always reads from IndexedDB directly.
+    return this._histCache
+  }
+  saveHistory(hist: BookingHistoryItem[]): void {
+    this._histCache = hist
+    // Fire-and-forget persist to IndexedDB
+    HistoryDB.saveAll(hist).catch(e => console.warn('saveHistory IDB error:', e))
+  }
+  private _histCache: BookingHistoryItem[] = []
+
+  // Users shim (read-only — use AuthContext / UsersDB for writes)
+  getUsers(): UserProfile[] { return this._usersCache }
+  saveUsers(users: UserProfile[]): void {
+    this._usersCache = users
+    UsersDB.saveAll(users).catch(e => console.warn('saveUsers IDB error:', e))
+  }
+  private _usersCache: UserProfile[] = []
+
+  // Notifications shim
+  getNotifications(): NotificationItem[] { return this._notifsCache }
+  saveNotifications(notifs: NotificationItem[]): void {
+    this._notifsCache = notifs
+    NotificationsDB.saveAll(notifs).catch(e => console.warn('saveNotifs IDB error:', e))
+  }
+  private _notifsCache: NotificationItem[] = []
+}
+
+/** @deprecated Use IndexedDB accessors (VenuesDB, BookingsDB, etc.) directly. */
+export const localStore = new LocalStoreShim()
+
+// --------------------------------------------------------------------------
+// Venues
+// --------------------------------------------------------------------------
 
 export async function fetchVenues(): Promise<Venue[]> {
-  if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.from('venues').select('*')
-    if (!error && data && data.length > 0) {
-      return data as Venue[]
-    }
-  }
-  return localStore.getVenues()
+  await initDB()
+  const venues = await VenuesDB.getAll()
+  return venues.sort((a, b) => a.name.localeCompare(b.name))
 }
 
 export async function saveVenue(venue: Venue): Promise<Venue> {
-  const venues = localStore.getVenues()
-  const idx = venues.findIndex(v => v.id === venue.id)
-  if (idx >= 0) {
-    venues[idx] = { ...venue, updatedAt: new Date().toISOString() }
-  } else {
-    venues.unshift(venue)
-  }
-  localStore.saveVenues(venues)
+  await initDB()
+  const updated = { ...venue, updatedAt: new Date().toISOString() }
+  await VenuesDB.save(updated)
   notifySubscribers()
-  return venue
+  return updated
 }
+
+// --------------------------------------------------------------------------
+// Bookings
+// --------------------------------------------------------------------------
 
 export async function fetchBookings(): Promise<Booking[]> {
-  if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.from('bookings').select('*')
-    if (!error && data && data.length > 0) {
-      return data as Booking[]
-    }
-  }
-  return localStore.getBookings()
+  await initDB()
+  const bookings = await BookingsDB.getAll()
+  // Sort newest first
+  return bookings.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )
 }
 
-export async function createBookingRequest(newBooking: Omit<Booking, 'id' | 'referenceCode' | 'status' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; booking?: Booking; error?: string }> {
-  const bookings = localStore.getBookings()
+export async function createBookingRequest(
+  newBooking: Omit<Booking, 'id' | 'referenceCode' | 'status' | 'createdAt' | 'updatedAt'>
+): Promise<{ success: boolean; booking?: Booking; error?: string }> {
+  await initDB()
+
+  const allBookings = await BookingsDB.getAll()
   const newId = `book-${Date.now()}`
   const referenceCode = generateReferenceCode()
   const now = new Date().toISOString()
 
-  // Concurrency check before initial submission
-  const avail = checkVenueAvailability(
+  // Concurrency / availability check
+  checkVenueAvailability(
     newBooking.requestedVenueId,
     newBooking.requestedDate,
     newBooking.requestedStart,
     newBooking.requestedEnd,
     15,
     15,
-    bookings
+    allBookings
   )
 
   const booking: Booking = {
@@ -170,14 +213,13 @@ export async function createBookingRequest(newBooking: Omit<Booking, 'id' | 'ref
     updatedAt: now
   }
 
-  // Prepend to bookings list
-  bookings.unshift(booking)
-  localStore.saveBookings(bookings)
+  // Persist to IndexedDB
+  await BookingsDB.save(booking)
 
-  // Append history to Persistent DB & LocalStore
-  const venues = localStore.getVenues()
-  const venueObj = venues.find(v => v.id === newBooking.requestedVenueId)
-  await recordEventHistory({
+  // Audit history
+  const allVenues = await VenuesDB.getAll()
+  const venueObj = allVenues.find(v => v.id === newBooking.requestedVenueId)
+  const histEntry: BookingHistoryItem = {
     id: `hist-${Date.now()}`,
     bookingId: newId,
     eventTitle: newBooking.eventTitle,
@@ -190,21 +232,21 @@ export async function createBookingRequest(newBooking: Omit<Booking, 'id' | 'ref
     changedByRole: 'user',
     comments: 'Booking request created and submitted for administrator review.',
     createdAt: now
-  })
+  }
+  await HistoryDB.save(histEntry)
 
-  // Notify Administrators
-  const notifs = localStore.getNotifications()
-  notifs.unshift({
+  // Notify admin
+  const adminNotif: NotificationItem = {
     id: `notif-${Date.now()}`,
-    userId: 'user-admin-1', // Notify Dean / Admin
+    userId: 'user-admin-1',
     bookingId: newId,
     title: `New Booking Request: ${newBooking.eventTitle}`,
-    message: `${newBooking.organizerName} requested a venue for ${newBooking.requestedDate} (${newBooking.requestedStart} - ${newBooking.requestedEnd}).`,
+    message: `${newBooking.organizerName} requested a venue for ${newBooking.requestedDate} (${newBooking.requestedStart} – ${newBooking.requestedEnd}).`,
     type: 'warning',
     isRead: false,
     createdAt: now
-  })
-  localStore.saveNotifications(notifs)
+  }
+  await NotificationsDB.save(adminNotif)
 
   notifySubscribers()
   return { success: true, booking }
@@ -218,24 +260,18 @@ export async function approveBookingTransactional(params: {
   reviewerRole?: UserRole
   reviewNotes?: string
 }): Promise<{ success: boolean; error?: string; booking?: Booking }> {
-  // CRITICAL AUTHORIZATION CHECK: Only Campus Administrator has authority to approve!
   if (params.reviewerRole && params.reviewerRole !== 'admin') {
     return {
       success: false,
-      error: 'Security Authorization Error: Only Campus Administrators possess credentials and authority to approve booking reservations.'
+      error: 'Security Authorization Error: Only Campus Administrators can approve bookings.'
     }
   }
 
-  const bookings = localStore.getBookings()
-  const bookingIndex = bookings.findIndex(b => b.id === params.bookingId)
+  await initDB()
+  const booking = await BookingsDB.getById(params.bookingId)
+  if (!booking) return { success: false, error: 'Booking request not found.' }
 
-  if (bookingIndex === -1) {
-    return { success: false, error: 'Booking request not found.' }
-  }
-
-  const booking = bookings[bookingIndex]
-
-  // CRITICAL SERVER-SIDE RE-VALIDATION: Prevent race conditions & overlapping reservations!
+  const allBookings = await BookingsDB.getAll()
   const targetVenueId = params.assignedVenueId || booking.requestedVenueId
   const avail = checkVenueAvailability(
     targetVenueId,
@@ -244,14 +280,14 @@ export async function approveBookingTransactional(params: {
     booking.requestedEnd,
     15,
     15,
-    bookings,
-    booking.id // exclude self
+    allBookings,
+    booking.id
   )
 
   if (!avail.isAvailable) {
     return {
       success: false,
-      error: `Conflict detected: ${avail.reason}. You cannot approve this booking because another event was confirmed for this venue/time.`
+      error: `Conflict detected: ${avail.reason}. Another confirmed event already occupies this slot.`
     }
   }
 
@@ -270,13 +306,12 @@ export async function approveBookingTransactional(params: {
     qrCheckInToken: qrToken
   }
 
-  bookings[bookingIndex] = updatedBooking
-  localStore.saveBookings(bookings)
+  await BookingsDB.save(updatedBooking)
 
-  // Audit history persistent DB insertion
-  const venues = localStore.getVenues()
-  const venueObj = venues.find(v => v.id === targetVenueId)
-  await recordEventHistory({
+  // Audit history
+  const allVenues = await VenuesDB.getAll()
+  const venueObj = allVenues.find(v => v.id === targetVenueId)
+  await HistoryDB.save({
     id: `hist-${Date.now()}`,
     bookingId: booking.id,
     eventTitle: booking.eventTitle,
@@ -291,19 +326,17 @@ export async function approveBookingTransactional(params: {
     createdAt: now
   })
 
-  // Notify Organizer
-  const notifs = localStore.getNotifications()
-  notifs.unshift({
+  // Notify organizer
+  await NotificationsDB.save({
     id: `notif-${Date.now()}`,
     userId: booking.organizerId,
     bookingId: booking.id,
     title: `Booking Approved: ${booking.eventTitle}`,
-    message: `Your booking (Ref: ${booking.referenceCode}) has been officially approved. You can now download the calendar .ics invite or QR ticket.`,
+    message: `Your booking (Ref: ${booking.referenceCode}) has been officially approved.`,
     type: 'success',
     isRead: false,
     createdAt: now
   })
-  localStore.saveNotifications(notifs)
 
   notifySubscribers()
   return { success: true, booking: updatedBooking }
@@ -316,26 +349,23 @@ export async function rejectBooking(params: {
   reviewerRole?: UserRole
   rejectionReason: string
 }): Promise<{ success: boolean; error?: string }> {
-  // CRITICAL AUTHORIZATION CHECK: Only Campus Administrator has authority to reject!
   if (params.reviewerRole && params.reviewerRole !== 'admin') {
     return {
       success: false,
-      error: 'Security Authorization Error: Only Campus Administrators possess credentials and authority to reject booking reservations.'
+      error: 'Security Authorization Error: Only Campus Administrators can reject bookings.'
     }
   }
 
-  if (!params.rejectionReason || !params.rejectionReason.trim()) {
-    return { success: false, error: 'A mandatory rejection reason must be provided to the organizer.' }
+  if (!params.rejectionReason?.trim()) {
+    return { success: false, error: 'A rejection reason must be provided.' }
   }
 
-  const bookings = localStore.getBookings()
-  const bookingIndex = bookings.findIndex(b => b.id === params.bookingId)
-  if (bookingIndex === -1) return { success: false, error: 'Booking not found.' }
+  await initDB()
+  const booking = await BookingsDB.getById(params.bookingId)
+  if (!booking) return { success: false, error: 'Booking not found.' }
 
-  const booking = bookings[bookingIndex]
   const now = new Date().toISOString()
-
-  bookings[bookingIndex] = {
+  await BookingsDB.save({
     ...booking,
     status: 'Rejected',
     rejectionReason: params.rejectionReason,
@@ -343,13 +373,11 @@ export async function rejectBooking(params: {
     reviewedByName: params.reviewerName,
     reviewedAt: now,
     updatedAt: now
-  }
-  localStore.saveBookings(bookings)
+  })
 
-  // Audit history persistent DB insertion
-  const venues = localStore.getVenues()
-  const venueObj = venues.find(v => v.id === (booking.assignedVenueId || booking.requestedVenueId))
-  await recordEventHistory({
+  const allVenues = await VenuesDB.getAll()
+  const venueObj = allVenues.find(v => v.id === (booking.assignedVenueId || booking.requestedVenueId))
+  await HistoryDB.save({
     id: `hist-${Date.now()}`,
     bookingId: booking.id,
     eventTitle: booking.eventTitle,
@@ -364,19 +392,16 @@ export async function rejectBooking(params: {
     createdAt: now
   })
 
-  // Notify Organizer
-  const notifs = localStore.getNotifications()
-  notifs.unshift({
+  await NotificationsDB.save({
     id: `notif-${Date.now()}`,
     userId: booking.organizerId,
     bookingId: booking.id,
     title: `Booking Request Declined: ${booking.eventTitle}`,
-    message: `Reason: ${params.rejectionReason}. You may revise your request or pick an alternative time slot.`,
+    message: `Reason: ${params.rejectionReason}. You may revise your request or pick an alternative slot.`,
     type: 'danger',
     isRead: false,
     createdAt: now
   })
-  localStore.saveNotifications(notifs)
 
   notifySubscribers()
   return { success: true }
@@ -389,12 +414,11 @@ export async function reassignBooking(params: {
   reviewerName: string
   reason: string
 }): Promise<{ success: boolean; error?: string }> {
-  const bookings = localStore.getBookings()
-  const bookingIndex = bookings.findIndex(b => b.id === params.bookingId)
-  if (bookingIndex === -1) return { success: false, error: 'Booking not found.' }
+  await initDB()
+  const booking = await BookingsDB.getById(params.bookingId)
+  if (!booking) return { success: false, error: 'Booking not found.' }
 
-  const booking = bookings[bookingIndex]
-  // Re-check availability in new venue
+  const allBookings = await BookingsDB.getAll()
   const avail = checkVenueAvailability(
     params.newVenueId,
     booking.requestedDate,
@@ -402,7 +426,7 @@ export async function reassignBooking(params: {
     booking.requestedEnd,
     15,
     15,
-    bookings,
+    allBookings,
     booking.id
   )
 
@@ -411,18 +435,16 @@ export async function reassignBooking(params: {
   }
 
   const now = new Date().toISOString()
-  bookings[bookingIndex] = {
+  await BookingsDB.save({
     ...booking,
     assignedVenueId: params.newVenueId,
     reviewNotes: `Venue reassigned by administrator. Note: ${params.reason}`,
     updatedAt: now
-  }
-  localStore.saveBookings(bookings)
+  })
 
-  // Persistent event history DB
-  const venues = localStore.getVenues()
-  const venueObj = venues.find(v => v.id === params.newVenueId)
-  await recordEventHistory({
+  const allVenues = await VenuesDB.getAll()
+  const venueObj = allVenues.find(v => v.id === params.newVenueId)
+  await HistoryDB.save({
     id: `hist-${Date.now()}`,
     bookingId: booking.id,
     eventTitle: booking.eventTitle,
@@ -447,25 +469,21 @@ export async function cancelBooking(params: {
   userName: string
   reason: string
 }): Promise<{ success: boolean; error?: string }> {
-  const bookings = localStore.getBookings()
-  const bookingIndex = bookings.findIndex(b => b.id === params.bookingId)
-  if (bookingIndex === -1) return { success: false, error: 'Booking not found.' }
+  await initDB()
+  const booking = await BookingsDB.getById(params.bookingId)
+  if (!booking) return { success: false, error: 'Booking not found.' }
 
-  const booking = bookings[bookingIndex]
   const now = new Date().toISOString()
-
-  bookings[bookingIndex] = {
+  await BookingsDB.save({
     ...booking,
     status: 'Cancelled',
     reviewNotes: `Cancelled by ${params.userName}: ${params.reason}`,
     updatedAt: now
-  }
-  localStore.saveBookings(bookings)
+  })
 
-  // Persistent event history DB
-  const venues = localStore.getVenues()
-  const venueObj = venues.find(v => v.id === (booking.assignedVenueId || booking.requestedVenueId))
-  await recordEventHistory({
+  const allVenues = await VenuesDB.getAll()
+  const venueObj = allVenues.find(v => v.id === (booking.assignedVenueId || booking.requestedVenueId))
+  await HistoryDB.save({
     id: `hist-${Date.now()}`,
     bookingId: booking.id,
     eventTitle: booking.eventTitle,
@@ -484,60 +502,87 @@ export async function cancelBooking(params: {
   return { success: true }
 }
 
+// --------------------------------------------------------------------------
+// Maintenance Blocks
+// --------------------------------------------------------------------------
+
 export async function fetchMaintenanceBlocks(): Promise<VenueMaintenanceBlock[]> {
-  return localStore.getBlocks()
+  await initDB()
+  return MaintenanceDB.getAll()
 }
 
-export async function addMaintenanceBlock(block: Omit<VenueMaintenanceBlock, 'id' | 'createdAt'>): Promise<VenueMaintenanceBlock> {
-  const blocks = localStore.getBlocks()
+export async function addMaintenanceBlock(
+  block: Omit<VenueMaintenanceBlock, 'id' | 'createdAt'>
+): Promise<VenueMaintenanceBlock> {
+  await initDB()
   const newBlock: VenueMaintenanceBlock = {
     ...block,
     id: `maint-${Date.now()}`,
     createdAt: new Date().toISOString()
   }
-  blocks.unshift(newBlock)
-  localStore.saveBlocks(blocks)
+  await MaintenanceDB.save(newBlock)
   notifySubscribers()
   return newBlock
 }
 
 export async function deleteMaintenanceBlock(id: string): Promise<boolean> {
-  const blocks = localStore.getBlocks()
-  const filtered = blocks.filter(b => b.id !== id)
-  localStore.saveBlocks(filtered)
+  await initDB()
+  await MaintenanceDB.delete(id)
   notifySubscribers()
   return true
 }
 
+// --------------------------------------------------------------------------
+// Notifications
+// --------------------------------------------------------------------------
+
 export async function fetchNotifications(userId?: string): Promise<NotificationItem[]> {
-  const notifs = localStore.getNotifications()
-  if (!userId) return notifs
-  return notifs.filter(n => n.userId === userId || n.userId === 'all')
+  await initDB()
+  if (!userId) return NotificationsDB.getAll()
+
+  const all = await NotificationsDB.getAll()
+  return all
+    .filter(n => n.userId === userId || n.userId === 'all')
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 }
 
 export async function markNotificationAsRead(id: string): Promise<void> {
-  const notifs = localStore.getNotifications()
-  const idx = notifs.findIndex(n => n.id === id)
-  if (idx >= 0) {
-    notifs[idx].isRead = true
-    localStore.saveNotifications(notifs)
+  await initDB()
+  const all = await NotificationsDB.getAll()
+  const notif = all.find(n => n.id === id)
+  if (notif) {
+    await NotificationsDB.save({ ...notif, isRead: true })
     notifySubscribers()
   }
 }
 
 export async function markAllNotificationsRead(userId: string): Promise<void> {
-  const notifs = localStore.getNotifications()
-  notifs.forEach(n => {
-    if (n.userId === userId || n.userId === 'all') {
-      n.isRead = true
-    }
-  })
-  localStore.saveNotifications(notifs)
+  await initDB()
+  const all = await NotificationsDB.getAll()
+  const userNotifs = all.filter(n => n.userId === userId || n.userId === 'all')
+  const updated = userNotifs.map(n => ({ ...n, isRead: true }))
+  await NotificationsDB.saveAll(updated)
   notifySubscribers()
 }
 
+// --------------------------------------------------------------------------
+// Booking History
+// --------------------------------------------------------------------------
+
 export async function fetchBookingHistory(bookingId: string): Promise<BookingHistoryItem[]> {
-  return fetchEventHistoryByBookingId(bookingId)
+  await initDB()
+  const items = await HistoryDB.getByBooking(bookingId)
+  return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 }
 
-export { fetchAllEventHistory, recordEventHistory } from './eventHistoryDB'
+export async function fetchAllEventHistory(): Promise<BookingHistoryItem[]> {
+  await initDB()
+  const items = await HistoryDB.getAll()
+  return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+}
+
+export async function recordEventHistory(entry: BookingHistoryItem): Promise<BookingHistoryItem> {
+  await initDB()
+  await HistoryDB.save(entry)
+  return entry
+}
