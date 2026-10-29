@@ -97,6 +97,8 @@ async function _doInit(): Promise<void> {
   }
 
   markDBSeeded()
+  // Trigger background mirror sync to Supabase if configured
+  syncLocalBookingsToSupabase().catch(console.warn)
 }
 
 // --------------------------------------------------------------------------
@@ -220,7 +222,7 @@ export async function createBookingRequest(
   // Cloud Mirror: If Supabase credentials are configured, mirror the booking record to cloud
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase.from('bookings').upsert({
+      const { error } = await supabase.from('bookings').upsert({
         id: booking.id,
         reference_code: booking.referenceCode,
         organizer_name: booking.organizerName,
@@ -241,6 +243,9 @@ export async function createBookingRequest(
         additional_notes: booking.additionalNotes,
         status: booking.status
       })
+      if (error) {
+        console.error('Supabase booking sync error:', error)
+      }
     } catch (cloudErr) {
       console.warn('Supabase remote sync warning:', cloudErr)
     }
@@ -615,4 +620,42 @@ export async function recordEventHistory(entry: BookingHistoryItem): Promise<Boo
   await initDB()
   await HistoryDB.save(entry)
   return entry
+}
+
+/**
+ * Synchronizes all local bookings from IndexedDB to Supabase cloud table.
+ */
+export async function syncLocalBookingsToSupabase(): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) return
+  try {
+    const all = await BookingsDB.getAll()
+    for (const b of all) {
+      const { error } = await supabase.from('bookings').upsert({
+        id: b.id,
+        reference_code: b.referenceCode,
+        organizer_name: b.organizerName,
+        organizer_email: b.organizerEmail,
+        organizer_phone: b.organizerPhone,
+        department: b.department,
+        event_title: b.eventTitle,
+        event_description: b.eventDescription,
+        event_category: b.eventCategory,
+        expected_attendees: b.expectedAttendees,
+        visibility: b.visibility,
+        requested_venue_id: b.requestedVenueId,
+        requested_date: b.requestedDate,
+        requested_start: b.requestedStart,
+        requested_end: b.requestedEnd,
+        setup_start: b.setupStart,
+        cleanup_end: b.cleanupEnd,
+        additional_notes: b.additionalNotes,
+        status: b.status
+      })
+      if (error) {
+        console.error('Supabase sync warning for', b.referenceCode, error.message)
+      }
+    }
+  } catch (err) {
+    console.error('Failed to sync bookings to Supabase:', err)
+  }
 }
