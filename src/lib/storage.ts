@@ -67,9 +67,11 @@ let _initPromise: Promise<void> | null = null
  * very first run. Safe to call multiple times — subsequent calls are no-ops.
  */
 export async function initDB(): Promise<void> {
-  if (_initPromise) return _initPromise
-  _initPromise = _doInit()
-  return _initPromise
+  if (!_initPromise) {
+    _initPromise = _doInit()
+  }
+  await _initPromise
+  syncLocalBookingsToSupabase().catch(console.warn)
 }
 
 async function _doInit(): Promise<void> {
