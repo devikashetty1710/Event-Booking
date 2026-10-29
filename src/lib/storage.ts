@@ -373,6 +373,14 @@ export async function approveBookingTransactional(params: {
     createdAt: now
   })
 
+  syncBookingUpdateToSupabase(booking.id, {
+    status: 'Approved',
+    assigned_venue_id: targetVenueId,
+    review_notes: params.reviewNotes || 'Approved by campus administration.',
+    reviewed_by_name: params.reviewerName,
+    reviewed_at: now
+  })
+
   notifySubscribers()
   return { success: true, booking: updatedBooking }
 }
@@ -657,5 +665,19 @@ export async function syncLocalBookingsToSupabase(): Promise<void> {
     }
   } catch (err) {
     console.error('Failed to sync bookings to Supabase:', err)
+  }
+}
+
+
+/**
+ * Mirrors a booking update (e.g. status changed to Approved/Rejected) to Supabase.
+ */
+export async function syncBookingUpdateToSupabase(bookingId: string, updates: Record<string, any>): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) return
+  try {
+    const { error } = await supabase.from('bookings').update(updates).eq('id', bookingId)
+    if (error) console.error('Supabase booking update error:', error.message)
+  } catch (err) {
+    console.warn('Supabase update warning:', err)
   }
 }
