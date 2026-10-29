@@ -39,6 +39,7 @@ import {
   openDB,
   dbClear
 } from './db'
+import { supabase, isSupabaseConfigured } from './supabase'
 
 // --------------------------------------------------------------------------
 // Reactive subscriber system (for UI re-renders)
@@ -215,6 +216,35 @@ export async function createBookingRequest(
 
   // Persist to IndexedDB
   await BookingsDB.save(booking)
+
+  // Cloud Mirror: If Supabase credentials are configured, mirror the booking record to cloud
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('bookings').upsert({
+        id: booking.id,
+        reference_code: booking.referenceCode,
+        organizer_name: booking.organizerName,
+        organizer_email: booking.organizerEmail,
+        organizer_phone: booking.organizerPhone,
+        department: booking.department,
+        event_title: booking.eventTitle,
+        event_description: booking.eventDescription,
+        event_category: booking.eventCategory,
+        expected_attendees: booking.expectedAttendees,
+        visibility: booking.visibility,
+        requested_venue_id: booking.requestedVenueId,
+        requested_date: booking.requestedDate,
+        requested_start: booking.requestedStart,
+        requested_end: booking.requestedEnd,
+        setup_start: booking.setupStart,
+        cleanup_end: booking.cleanupEnd,
+        additional_notes: booking.additionalNotes,
+        status: booking.status
+      })
+    } catch (cloudErr) {
+      console.warn('Supabase remote sync warning:', cloudErr)
+    }
+  }
 
   // Audit history
   const allVenues = await VenuesDB.getAll()

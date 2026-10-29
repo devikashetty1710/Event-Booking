@@ -21,7 +21,8 @@ import {
   Send,
   Building2,
   SlidersHorizontal,
-  Info
+  Info,
+  Lock
 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 
@@ -102,6 +103,19 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
     // Step 4: Selected Venue
     selectedVenueId: initialVenueId || ''
   })
+
+  // Synchronize organizer details whenever currentUser is loaded or updated
+  useEffect(() => {
+    if (currentUser) {
+      setFormData(prev => ({
+        ...prev,
+        organizerName: currentUser.fullName || prev.organizerName,
+        organizerEmail: currentUser.email || prev.organizerEmail,
+        department: currentUser.department || prev.department,
+        organizerPhone: currentUser.phone || prev.organizerPhone,
+      }))
+    }
+  }, [currentUser])
 
   // Calculate recommendation matches in real-time
   const recommendations = useMemo(() => {
@@ -253,8 +267,8 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
 
     const result = await createBookingRequest({
       organizerId: currentUser.id,
-      organizerName: formData.organizerName,
-      organizerEmail: formData.organizerEmail,
+      organizerName: currentUser?.fullName || formData.organizerName,
+      organizerEmail: currentUser?.email || formData.organizerEmail,
       organizerPhone: formData.organizerPhone,
       department: formData.department,
       eventTitle: formData.eventTitle,
@@ -514,21 +528,59 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Organizer Name</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-700">Organizer Name</label>
+                  {currentUser && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 font-medium bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                      <Lock className="w-2.5 h-2.5 text-slate-400" />
+                      Locked
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
-                  value={formData.organizerName}
-                  onChange={(e) => setFormData({ ...formData, organizerName: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50/50"
+                  value={currentUser ? (currentUser.fullName || formData.organizerName) : formData.organizerName}
+                  readOnly={!!currentUser}
+                  disabled={!!currentUser}
+                  onChange={(e) => {
+                    if (!currentUser) {
+                      setFormData({ ...formData, organizerName: e.target.value })
+                    }
+                  }}
+                  className={`w-full px-3 py-2 text-xs rounded-lg border ${
+                    currentUser
+                      ? 'border-slate-200 bg-slate-100 text-slate-600 cursor-not-allowed select-none font-medium'
+                      : 'border-slate-200 bg-slate-50/50 text-slate-800'
+                  }`}
+                  title={currentUser ? "Organizer name is fixed to your logged-in account and cannot be modified." : undefined}
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Institutional Email</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-700">Institutional Email</label>
+                  {currentUser && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 font-medium bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                      <Lock className="w-2.5 h-2.5 text-slate-400" />
+                      Verified
+                    </span>
+                  )}
+                </div>
                 <input
                   type="email"
-                  value={formData.organizerEmail}
-                  onChange={(e) => setFormData({ ...formData, organizerEmail: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50/50"
+                  value={currentUser ? (currentUser.email || formData.organizerEmail) : formData.organizerEmail}
+                  readOnly={!!currentUser}
+                  disabled={!!currentUser}
+                  onChange={(e) => {
+                    if (!currentUser) {
+                      setFormData({ ...formData, organizerEmail: e.target.value })
+                    }
+                  }}
+                  className={`w-full px-3 py-2 text-xs rounded-lg border ${
+                    currentUser
+                      ? 'border-slate-200 bg-slate-100 text-slate-600 cursor-not-allowed select-none font-medium'
+                      : 'border-slate-200 bg-slate-50/50 text-slate-800'
+                  }`}
+                  title={currentUser ? "Institutional email is fixed to your logged-in account." : undefined}
                 />
               </div>
               <div>
@@ -537,7 +589,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                   type="text"
                   value={formData.organizerPhone}
                   onChange={(e) => setFormData({ ...formData, organizerPhone: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50/50"
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50/50 text-slate-800"
                 />
               </div>
             </div>
